@@ -38,6 +38,11 @@ class TrainWifiService : Service() {
         const val POLL_INTERVAL_MS = 15_000L
         const val NO_PORTAL_RETRY_MIN_MS = 15_000L
         const val NO_PORTAL_RETRY_MAX_MS = 120_000L
+        const val VPN_RETRY_MS = 15_000L
+
+        const val VPN_HINT = "Android refuses to bind this app's sockets to the Wi-Fi while a " +
+            "non-bypassable VPN (key icon in the status bar) is active. Turn the VPN off, or exclude " +
+            "Train Wi-Fi from it, and the portal will be probed again within 15 s."
         const val DEMO_INTERVAL_MS = 10_000L
         const val FAILURES_BEFORE_REDETECT = 3
 
@@ -180,11 +185,19 @@ class TrainWifiService : Service() {
         while (coroutineContext.isActive) {
             try {
                 if (api == null) {
-                    api = detectPortal(client)
+                    val detection = detectPortal(client)
+                    api = detection.api
                     if (api == null) {
-                        publish(TrainState(phase = Phase.NO_PORTAL, message = "Retrying in ${noPortalDelay / 1000} s"))
-                        delay(noPortalDelay)
-                        noPortalDelay = min(noPortalDelay * 2, NO_PORTAL_RETRY_MAX_MS)
+                        if (detection.bindingRefused || isVpnActive()) {
+                            // netd returns EPERM for Network.bindSocket when a secure VPN applies to
+                            // this UID. Nothing to do but wait for the VPN to go away, so poll fast.
+                            publish(TrainState(phase = Phase.VPN_BLOCKED, message = VPN_HINT))
+                            delay(VPN_RETRY_MS)
+                        } else {
+                            publish(TrainState(phase = Phase.NO_PORTAL, message = "Retrying in ${noPortalDelay / 1000} s"))
+                            delay(noPortalDelay)
+                            noPortalDelay = min(noPortalDelay * 2, NO_PORTAL_RETRY_MAX_MS)
+                        }
                         continue
                     }
                     noPortalDelay = NO_PORTAL_RETRY_MIN_MS
@@ -244,18 +257,29 @@ class TrainWifiService : Service() {
         }
     }
 
-    private fun detectPortal(client: PortalClient): PortalApi? {
+    private class Detection(val api: PortalApi?, val bindingRefused: Boolean)
+
+    private fun detectPortal(client: PortalClient): Detection {
+        var bindingRefused = false
         for (portal in Portal.entries) {
             val api = PortalApi(client, portal)
             try {
                 api.connectionStatus()
                 AppState.log("Portal detected: ${portal.baseUrl}")
-                return api
+                return Detection(api, false)
             } catch (e: Exception) {
                 AppState.log("No portal at ${portal.host}: ${e.javaClass.simpleName} ${e.message ?: ""}".trim())
+                if (e.message?.contains("EPERM") == true) bindingRefused = true
             }
         }
-        return null
+        if (bindingRefused) AppState.log("Socket binding refused (EPERM): a VPN is routing this app. $VPN_HINT")
+        return Detection(null, bindingRefused)
+    }
+
+    /** True when the network Android would use for this app is a VPN. */
+    private fun isVpnActive(): Boolean {
+        val active = connectivity.activeNetwork ?: return false
+        return connectivity.getNetworkCapabilities(active)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
     }
 
     /** Best effort: a failing secondary endpoint must not take the whole poll down. */

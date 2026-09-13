@@ -99,6 +99,7 @@ class TripNotification(private val context: Context) {
         val title = when (state.phase) {
             Phase.ACTIVE -> "Connected to ${state.portal?.host ?: "train Wi-Fi"}"
             Phase.ACTIVATING -> Phase.ACTIVATING.title
+            Phase.VPN_BLOCKED -> Phase.VPN_BLOCKED.title
             else -> context.getString(R.string.notification_waiting)
         }
         builder.setContentTitle(title)

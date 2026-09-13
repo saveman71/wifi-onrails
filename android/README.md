@@ -79,7 +79,9 @@ manager / browser you use).
    If the app was previously refused, `addNetworkSuggestions` returns `APP_DISALLOWED` and the app
    shows where to fix it: Settings > Network & internet > Internet > Network preferences >
    *Apps that can suggest networks* (wording varies by vendor).
-4. Optional but recommended: exclude the app from battery optimisation so the poll loop is not
+4. **Turn off any VPN** (NextDNS, WireGuard, corporate VPN: anything that shows the key icon in
+   the status bar), or exclude Train Wi-Fi from it if the VPN app allows it. See below.
+5. Optional but recommended: exclude the app from battery optimisation so the poll loop is not
    throttled on long trips.
 
 Then put the phone in your pocket. When a listed SSID appears the phone joins it, the service sees
@@ -99,6 +101,21 @@ the Wi-Fi network, finds the portal, activates it and the notification switches 
 **Stop** (button or notification action) ends the service and removes the notification. The Wi-Fi
 suggestions stay registered until you edit the list; **Save & apply SSIDs** removes all previous
 suggestions and registers the new list.
+
+## Known limitation: VPNs
+
+Android forbids an app whose traffic is routed through a non-bypassable VPN from using any other
+network. `Network.openConnection()` then fails at the socket level with
+`Binding socket to network N failed: EPERM`, before a single packet leaves the phone. Since the
+whole point of this app is to talk to the portal over the still-captive Wi-Fi while the default
+route is elsewhere, it cannot work while such a VPN is active. Going through the VPN is no
+alternative: its underlying network is the phone's default one, i.e. mobile data.
+
+The app recognises the EPERM (and an active VPN transport) and shows "A VPN blocks access to the
+train Wi-Fi" with the hint, then re-probes every 15 s so it recovers as soon as the VPN is off.
+Fixes, by preference: disable the VPN for the trip, exclude the app in the VPN's settings
+(only possible if that VPN app offers per-app exclusion or "allow bypass"), or for DNS-filter apps
+like NextDNS use Android's *Private DNS* setting instead of the app, which is not a VPN.
 
 ## Demo trip
 

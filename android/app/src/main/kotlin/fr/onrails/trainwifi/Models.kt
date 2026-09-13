@@ -16,6 +16,7 @@ enum class Phase(val title: String) {
     WAITING_WIFI("Waiting for train Wi-Fi"),
     PROBING("Wi-Fi connected, looking for a train portal"),
     NO_PORTAL("Wi-Fi connected, no train portal found"),
+    VPN_BLOCKED("A VPN blocks access to the train Wi-Fi"),
     ACTIVATING("Activating train Wi-Fi"),
     ACTIVE("On board"),
     DEMO("Demo trip"),

@@ -102,6 +102,18 @@ object Parsers {
             else -> null
         }
 
+        // Coordinates: look in the stop itself and in the usual nested objects, under the usual names.
+        val holders = listOfNotNull(
+            obj, obj.optJSONObject("coordinates"), obj.optJSONObject("position"), obj.optJSONObject("gps"),
+            location, location?.optJSONObject("coordinates"), location?.optJSONObject("position"),
+        )
+        var latitude: Double? = null
+        var longitude: Double? = null
+        for (holder in holders) {
+            latitude = latitude ?: holder.num("latitude") ?: holder.num("lat")
+            longitude = longitude ?: holder.num("longitude") ?: holder.num("lon") ?: holder.num("lng")
+        }
+
         return Stop(
             name = name,
             theoric = theoric,
@@ -109,6 +121,8 @@ object Parsers {
             delayMinutes = delay,
             traveledDistance = progress?.num("traveledDistance"),
             remainingDistance = progress?.num("remainingDistance"),
+            latitude = if (longitude != null) latitude else null,
+            longitude = if (latitude != null) longitude else null,
         )
     }
 

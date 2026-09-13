@@ -10,6 +10,7 @@
     <string name="label_ssids">Train Wi-Fi SSIDs, one per line (open networks)</string>
     <string name="label_log">Log, newest first, last 200 entries</string>
     <string name="label_route">Route</string>
+    <string name="map_recenter">Recenter</string>
     <string name="label_connection">Connection</string>
     <string name="label_advanced">Advanced: SSIDs and log</string>
     <string name="stat_speed">Train speed</string>

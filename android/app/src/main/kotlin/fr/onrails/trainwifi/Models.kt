@@ -60,8 +60,12 @@ data class Stop(
     val delayMinutes: Int?,
     val traveledDistance: Double?,
     val remainingDistance: Double?,
+    /** Station coordinates when the portal provides them (field names unverified, parsed tolerantly). */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 ) {
     val eta: ZonedDateTime? get() = real ?: theoric
+    val hasCoordinates: Boolean get() = latitude != null && longitude != null
     val isDelayed: Boolean get() = (delayMinutes ?: 0) > 0
 }
 

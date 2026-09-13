@@ -13,8 +13,8 @@ android {
         applicationId = "fr.onrails.trainwifi"
         minSdk = 29
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5-poc"
+        versionCode = 6
+        versionName = "0.6-poc"
     }
 
     buildTypes {
@@ -36,7 +36,9 @@ kotlin {
 }
 
 dependencies {
-    // The only third-party dependency: StateFlow and the service poll loop.
+    // StateFlow and the service poll loop.
     // HTTP is HttpURLConnection and JSON is org.json, both part of the platform.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Map view for the live train position (OpenStreetMap-based, pure Java, ~1 MB).
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 }

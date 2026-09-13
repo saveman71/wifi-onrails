@@ -4,8 +4,9 @@ Android counterpart of [`wifi_sncf.sh`](../wifi_sncf.sh). It joins the on-board 
 trains on its own, clears the captive portal without the user touching anything, and shows the
 trip (destination, ETA, delay, progress, speed) in a permanent notification.
 
-It is a proof of concept: plain Kotlin, platform APIs, one third-party dependency
-(`kotlinx-coroutines`, for `StateFlow`). No location permission.
+It is a proof of concept: plain Kotlin, platform APIs, two third-party dependencies
+(`kotlinx-coroutines` for `StateFlow`, `osmdroid` for the map). No location permission: the map
+shows the train's own GPS from the portal, not the phone's.
 
 ## How it works
 
@@ -39,6 +40,7 @@ Files, all under `app/src/main/kotlin/fr/onrails/trainwifi/`:
 | `TripNotification.kt` | Ongoing silent notification with progress bar and `BigTextStyle` |
 | `MainActivity.kt` | Hero card (destination, ETA, progress), stat tiles, connection card, buttons, Advanced section |
 | `TimelineView.kt` | Canvas-drawn route timeline: passed/upcoming stops, train marker, delays |
+| `TrainMap.kt` | osmdroid map: CARTO basemap, train marker from the portal GPS, route through the stops, follow mode |
 | `WifiSuggestions.kt`, `Settings.kt` | Suggestions API wrapper, persisted SSID list |
 | `DemoData.kt` | Canned JSON for both portals, used by "Demo trip" |
 
@@ -124,6 +126,12 @@ The screen follows the portal's look: INOUI burgundy accents, navy labels, soft 
 cards, light and dark palettes (`values/colors.xml`, `values-night/colors.xml`), no UI library.
 
 - **Hero card**: destination, ETA pill, "Arrival in N min, on time / +N min", progress bar.
+- **Live map** (shown as soon as the portal GPS has a fix): osmdroid with CARTO's free Dark Matter /
+  Positron raster basemap following the system theme, a burgundy train marker, and the route as a
+  polyline through the stops when their coordinates are present in `/train/details`. The map follows
+  the train until you pan; a Recenter chip brings it back. Zoom is capped at 14 to keep tile
+  downloads small on the train's quota; tiles are cached on disk. Attribution
+  "© OpenStreetMap contributors © CARTO" is drawn on the map, as both licences require.
 - **Stat tiles**: train speed, km traveled, km until arrival (sums of the stops' `progress`, metres in the API).
 - **Route**: a timeline drawn on canvas, passed stops filled, upcoming stops as rings, the train
   marker on the current segment, delays in burgundy.
@@ -168,6 +176,11 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
   is therefore chosen by time (first ETA still ahead) and `remainingDistance` is only a fallback
   when no stop carries a date. The sums over all stops do match the portal's trip totals, and
   their unit is metres (verified: 315 780 m traveled + 82 053 m left = the portal's 398 km trip).
+- **Stop coordinates.** The route polyline needs latitude/longitude per stop. The parser looks for
+  `latitude`/`lat` and `longitude`/`lon`/`lng` on the stop, in `coordinates`, `position`, `gps`
+  and `location`. Whether wifi.sncf or wifi.normandie.fr actually send coordinates, and under which
+  names, is unknown: without them the map shows the train only. The raw `/train/details` line in
+  the log tells.
 - **Redirect and TLS behaviour** of the portals on Android (certificate chain, https to http hops)
   has only been reasoned about, not observed.
 - **Name fields.** Stops prefer `name`, then `label`, then `location.name`. If `name` is a code

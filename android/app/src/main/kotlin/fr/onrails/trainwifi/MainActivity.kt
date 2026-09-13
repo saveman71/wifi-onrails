@@ -41,6 +41,8 @@ class MainActivity : Activity() {
     private lateinit var progressRow: View
     private lateinit var tripProgress: ProgressBar
     private lateinit var tripPercent: TextView
+    private lateinit var mapCard: View
+    private lateinit var trainMap: TrainMap
     private lateinit var statsRow: View
     private lateinit var statSpeed: TextView
     private lateinit var statTraveled: TextView
@@ -63,9 +65,11 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TrainMap.configure(this) // before the MapView is inflated
         setContentView(R.layout.activity_main)
         settings = Settings(this)
         bindViews()
+        trainMap = TrainMap(this, findViewById(R.id.map), findViewById(R.id.map_recenter))
 
         ssidEdit.setText(settings.ssids().joinToString("\n"))
         setAdvancedVisible(settings.advancedExpanded())
@@ -120,6 +124,7 @@ class MainActivity : Activity() {
         progressRow = findViewById(R.id.progress_row)
         tripProgress = findViewById(R.id.trip_progress)
         tripPercent = findViewById(R.id.trip_percent)
+        mapCard = findViewById(R.id.map_card)
         statsRow = findViewById(R.id.stats_row)
         statSpeed = findViewById(R.id.stat_speed)
         statTraveled = findViewById(R.id.stat_traveled)
@@ -146,10 +151,25 @@ class MainActivity : Activity() {
         scope.launch { AppState.log.collect { logView.text = it.asReversed().joinToString("\n") } }
     }
 
+    override fun onResume() {
+        super.onResume()
+        trainMap.onResume()
+    }
+
+    override fun onPause() {
+        trainMap.onPause()
+        super.onPause()
+    }
+
     override fun onStop() {
         uiScope?.cancel()
         uiScope = null
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        trainMap.onDestroy()
+        super.onDestroy()
     }
 
     private fun setAdvancedVisible(visible: Boolean) {
@@ -189,6 +209,7 @@ class MainActivity : Activity() {
     private fun render(state: TrainState) {
         phaseChip.text = chipLabel(state.phase)
         renderHero(state)
+        mapCard.visibility = if (trainMap.render(state)) View.VISIBLE else View.GONE
         renderStats(state)
         renderConnection(state)
         statusMessage.text = when {

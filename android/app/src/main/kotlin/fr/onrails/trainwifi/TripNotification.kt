@@ -19,24 +19,44 @@ import android.widget.RemoteViews
 class TripNotification(private val context: Context) {
 
     companion object {
-        const val CHANNEL_ID = "trip_status"
+        /** Silent, filed under "Silent" by the system: may be hidden from the lock screen once seen. */
+        const val CHANNEL_QUIET = "trip_status"
+
+        /** Default importance with sound and vibration off: stays on the lock screen, never rings. */
+        const val CHANNEL_LOCK_SCREEN = "trip_status_lockscreen"
         const val NOTIFICATION_ID = 1
         private const val MAX_STOP_ROWS = 5
     }
 
     private val manager = context.getSystemService(NotificationManager::class.java)
+    private val settings = Settings(context)
 
-    fun createChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
+    fun createChannels() {
+        val quiet = NotificationChannel(
+            CHANNEL_QUIET,
             context.getString(R.string.notification_channel_name),
-            NotificationManager.IMPORTANCE_LOW, // silent
+            NotificationManager.IMPORTANCE_LOW,
         ).apply {
             description = context.getString(R.string.notification_channel_description)
             setShowBadge(false)
         }
-        manager.createNotificationChannel(channel)
+        val lockScreen = NotificationChannel(
+            CHANNEL_LOCK_SCREEN,
+            context.getString(R.string.notification_channel_lockscreen_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = context.getString(R.string.notification_channel_lockscreen_description)
+            setShowBadge(false)
+            setSound(null, null)
+            enableVibration(false)
+            enableLights(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
+        manager.createNotificationChannel(quiet)
+        manager.createNotificationChannel(lockScreen)
     }
+
+    private fun channelId(): String = if (settings.keepOnLockScreen()) CHANNEL_LOCK_SCREEN else CHANNEL_QUIET
 
     fun show(state: TrainState) {
         manager.notify(NOTIFICATION_ID, build(state))
@@ -51,7 +71,7 @@ class TripNotification(private val context: Context) {
             context, 1, Intent(context, TrainWifiService::class.java).setAction(TrainWifiService.ACTION_STOP), flags,
         )
 
-        val builder = Notification.Builder(context, CHANNEL_ID)
+        val builder = Notification.Builder(context, channelId())
             .setSmallIcon(R.drawable.ic_train)
             .setColor(context.getColor(R.color.brand_red))
             .setOngoing(true)
@@ -88,13 +108,18 @@ class TripNotification(private val context: Context) {
         return builder.build()
     }
 
-    /** "79% · 277 km/h · next: Lyon Part Dieu 18:58" */
+    /** "277 km/h · next: Lyon Part Dieu 18:58", or "277 km/h · arrival in 29 min" on the last leg. */
     private fun subline(state: TrainState, trip: Trip): String {
         val parts = mutableListOf<String>()
-        trip.progressPercent?.let { parts += "$it%" }
         Formatting.speed(state.gps)?.let { parts += it }
         val next = trip.nextStop
-        if (next != null && next != trip.destination) parts += "next: ${next.name} ${Formatting.time(next.eta)}"
+        val destination = trip.destination
+        if (next != null && next != destination) {
+            parts += "next: ${next.name} ${Formatting.time(next.eta)}"
+        } else {
+            Formatting.minutesUntil(destination?.eta)?.let { parts += "arrival in $it min" }
+        }
+        destination?.delayMinutes?.takeIf { it > 0 }?.let { parts += "+$it min" }
         if (state.phase == Phase.DEMO) parts += "demo"
         return parts.joinToString(" · ")
     }
@@ -142,10 +167,10 @@ class TripNotification(private val context: Context) {
             views.addView(R.id.n_stops, more)
         }
 
+        // Only what matters on the move: data left and Wi-Fi quality.
         val footer = mutableListOf<String>()
-        state.connection?.let { footer += "${Formatting.mb(it.remainingMb)} left of ${Formatting.mb(it.totalMb)}" }
-        Formatting.wifi(state.statistics, state.barQueueEmpty)?.let { footer += it }
-        state.portal?.let { footer += it.host + if (state.phase == Phase.DEMO) " (demo)" else "" }
+        state.connection?.let { footer += "${Formatting.mb(it.remainingMb)} of data left" }
+        state.statistics?.takeIf { it.quality >= 0 }?.let { footer += "Wi-Fi ${it.quality}/5" }
         views.setTextViewText(R.id.n_footer, footer.joinToString(" · "))
         views.setViewVisibility(R.id.n_footer, if (footer.isEmpty()) View.GONE else View.VISIBLE)
         return views

@@ -128,6 +128,10 @@ cards, light and dark palettes (`values/colors.xml`, `values-night/colors.xml`),
 - **Route**: a timeline drawn on canvas, passed stops filled, upcoming stops as rings, the train
   marker on the current segment, delays in burgundy.
 - **Connection**: Wi-Fi quality dots, data quota bar, bandwidth, devices, bar queue.
+- **Keep on lock screen** switch: posts the card on a default-importance channel with sound and
+  vibration off, so it is not filed under "Silent" and stays on the lock screen. Off uses the
+  low-importance channel instead. Android still honours the system lock screen setting; if
+  "Hide silent notifications" or "Don't show notifications" is on there, the app cannot override it.
 - **Advanced** (collapsed by default, state remembered): the SSID editor and the raw log.
 
 ## Demo trip
@@ -178,7 +182,8 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
   Android 15 caps `dataSync` at 6 h per day, a train trip can be longer.
 - `START_STICKY`, `startForeground` immediately in `onStartCommand`.
 - Notification: custom RemoteViews in `DecoratedCustomViewStyle` (destination, ETA pill, brand
-  progress bar; expanded: the remaining stops with delays, then quota and Wi-Fi quality).
+  progress bar; expanded: the remaining stops with delays, then data left and Wi-Fi quality).
+  Two channels, silent (low) and lock screen (default importance, no sound), chosen by the switch.
   `IMPORTANCE_LOW` channel, `setOnlyAlertOnce(true)`, `setShowWhen(false)`, `CATEGORY_STATUS`,
   ongoing, a Stop action.
 - The `/router/api/pepita` socket.io namespace is not used: polling every 15 s is enough and avoids

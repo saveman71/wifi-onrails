@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
@@ -95,6 +96,13 @@ class MainActivity : Activity() {
             val clipboard = getSystemService(ClipboardManager::class.java)
             clipboard.setPrimaryClip(ClipData.newPlainText("Train Wi-Fi log", AppState.logText()))
             Toast.makeText(this, "Log copied", Toast.LENGTH_SHORT).show()
+        }
+        val lockSwitch = findViewById<Switch>(R.id.switch_lockscreen)
+        lockSwitch.isChecked = settings.keepOnLockScreen()
+        lockSwitch.setOnCheckedChangeListener { _, checked ->
+            settings.setKeepOnLockScreen(checked)
+            AppState.log(if (checked) "Notification kept on lock screen" else "Notification set to silent channel")
+            TrainWifiService.refresh(this)
         }
         advancedToggle.setOnClickListener {
             val show = advancedSection.visibility != View.VISIBLE

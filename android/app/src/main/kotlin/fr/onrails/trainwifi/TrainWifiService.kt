@@ -34,6 +34,7 @@ class TrainWifiService : Service() {
         const val ACTION_START = "fr.onrails.trainwifi.action.START"
         const val ACTION_STOP = "fr.onrails.trainwifi.action.STOP"
         const val ACTION_DEMO = "fr.onrails.trainwifi.action.DEMO"
+        const val ACTION_REFRESH = "fr.onrails.trainwifi.action.REFRESH"
 
         const val POLL_INTERVAL_MS = 15_000L
         const val NO_PORTAL_RETRY_MIN_MS = 15_000L
@@ -49,6 +50,11 @@ class TrainWifiService : Service() {
         fun start(context: Context) = context.startForegroundService(intent(context, ACTION_START))
         fun demo(context: Context) = context.startForegroundService(intent(context, ACTION_DEMO))
         fun stop(context: Context) = context.startService(intent(context, ACTION_STOP))
+
+        /** Re-post the notification (e.g. after a settings change). Only meaningful while running. */
+        fun refresh(context: Context) {
+            if (AppState.state.value.phase != Phase.STOPPED) context.startService(intent(context, ACTION_REFRESH))
+        }
 
         private fun intent(context: Context, action: String) =
             Intent(context, TrainWifiService::class.java).setAction(action)
@@ -86,7 +92,7 @@ class TrainWifiService : Service() {
         super.onCreate()
         connectivity = getSystemService(ConnectivityManager::class.java)
         notification = TripNotification(this)
-        notification.createChannel()
+        notification.createChannels()
 
         // TRANSPORT_WIFI only. Deliberately no NET_CAPABILITY_VALIDATED: the captive-portal
         // network is exactly the unvalidated one we need to see.
@@ -108,6 +114,7 @@ class TrainWifiService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_DEMO -> startDemo()
+            ACTION_REFRESH -> Unit // goForeground() above already re-posted the notification on the right channel
             else -> {
                 demoMode = false
                 val network = wifiNetwork

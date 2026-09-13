@@ -17,7 +17,11 @@
     <string name="stat_remaining">until arrival</string>
     <string name="status_stopped">Stopped</string>
     <string name="hint_idle">Press “Enable auto-connect”, approve the Wi-Fi suggestions, then just board the train.</string>
-    <string name="notification_channel_name">Trip status</string>
+    <string name="label_lockscreen">Keep on lock screen</string>
+    <string name="hint_lockscreen">Posts the card on a non-silent channel with sound off, so Android keeps it on the lock screen.</string>
+    <string name="notification_channel_name">Trip status (silent)</string>
+    <string name="notification_channel_lockscreen_name">Trip status (lock screen)</string>
+    <string name="notification_channel_lockscreen_description">Same information, default importance without sound so it stays visible on the lock screen</string>
     <string name="notification_channel_description">Ongoing train Wi-Fi and trip information</string>
     <string name="notification_waiting">Waiting for train Wi-Fi</string>
 </resources>

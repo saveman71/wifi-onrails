@@ -21,6 +21,7 @@ class Settings(context: Context) {
         private const val PREFS = "trainwifi"
         private const val KEY_SSIDS = "ssids" // newline separated, keeps order
         private const val KEY_ADVANCED = "advanced_expanded"
+        private const val KEY_LOCK_SCREEN = "lock_screen"
     }
 
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -39,6 +40,13 @@ class Settings(context: Context) {
     fun resetSsids(): List<String> {
         prefs.edit().remove(KEY_SSIDS).apply()
         return DEFAULT_SSIDS
+    }
+
+    /** Post the notification on a default-importance (still silent) channel so it stays on the lock screen. */
+    fun keepOnLockScreen(): Boolean = prefs.getBoolean(KEY_LOCK_SCREEN, true)
+
+    fun setKeepOnLockScreen(keep: Boolean) {
+        prefs.edit().putBoolean(KEY_LOCK_SCREEN, keep).apply()
     }
 
     fun advancedExpanded(): Boolean = prefs.getBoolean(KEY_ADVANCED, false)

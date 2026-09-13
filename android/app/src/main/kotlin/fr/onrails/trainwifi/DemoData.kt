@@ -42,13 +42,13 @@ object DemoData {
              "progress":{"traveledDistance":0,"remainingDistance":0}},
             {"name":"Lyon Part-Dieu","label":"LYON PART DIEU","delay":0,"isDelayed":false,
              "theoricDate":"${at(-12, true)}","realDate":"${at(-12, true)}",
-             "progress":{"traveledDistance":465,"remainingDistance":0}},
+             "progress":{"traveledDistance":465000,"remainingDistance":0}},
             {"name":"Valence TGV","label":"VALENCE TGV","delay":5,"isDelayed":true,
              "theoricDate":"${at(7, true)}","realDate":"${at(12, true)}",
-             "progress":{"traveledDistance":98,"remainingDistance":6}},
+             "progress":{"traveledDistance":98000,"remainingDistance":6000}},
             {"name":"Grenoble","label":"GRENOBLE","delay":5,"isDelayed":true,
              "theoricDate":"${at(45, true)}","realDate":"${at(50, true)}",
-             "progress":{"traveledDistance":0,"remainingDistance":50}}
+             "progress":{"traveledDistance":0,"remainingDistance":50000}}
         ]}""",
         bar = """{"isBarQueueEmpty":false}""",
     )
@@ -67,16 +67,16 @@ object DemoData {
              "progress":null},
             {"location":{"name":"Évreux-Normandie"},
              "arrival":{"date":"${at(-10, false)}","realDate":"${at(-10, false)}"},
-             "progress":{"traveledDistance":96,"remainingDistance":0}},
+             "progress":{"traveledDistance":96000,"remainingDistance":0}},
             {"location":{"name":"Bernay"},
              "arrival":{"date":"${at(17, false)}","realDate":"${at(20, false)}"},
-             "progress":{"traveledDistance":30,"remainingDistance":13}},
+             "progress":{"traveledDistance":30000,"remainingDistance":13000}},
             {"location":{"name":"Lisieux"},
              "arrival":{"date":"${at(33, false)}","realDate":"${at(36, false)}"},
-             "progress":{"traveledDistance":0,"remainingDistance":24}},
+             "progress":{"traveledDistance":0,"remainingDistance":24000}},
             {"location":{"name":"Caen"},
              "arrival":{"date":"${at(67, false)}","realDate":"${at(70, false)}"},
-             "progress":{"traveledDistance":0,"remainingDistance":50}}
+             "progress":{"traveledDistance":0,"remainingDistance":50000}}
         ]}""",
         bar = """{"isBarQueueEmpty":true}""",
     )

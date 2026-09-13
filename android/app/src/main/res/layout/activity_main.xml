@@ -168,9 +168,14 @@
                 <TextView
                     android:id="@+id/stat_speed"
                     style="@style/Text.StatValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:autoSizeMaxTextSize="26sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1" />
 
                 <TextView
                     style="@style/Text.Label"
@@ -200,9 +205,14 @@
                 <TextView
                     android:id="@+id/stat_traveled"
                     style="@style/Text.StatValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:autoSizeMaxTextSize="26sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1" />
 
                 <TextView
                     style="@style/Text.Label"
@@ -232,9 +242,14 @@
                 <TextView
                     android:id="@+id/stat_remaining"
                     style="@style/Text.StatValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"
+                    android:autoSizeMaxTextSize="26sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeTextType="uniform"
+                    android:gravity="center"
+                    android:maxLines="1" />
 
                 <TextView
                     style="@style/Text.Label"

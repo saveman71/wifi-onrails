@@ -71,8 +71,8 @@ object Parsers {
         return Trip(
             stops = stops,
             progressPercent = percent,
-            traveledDistance = if (withProgress > 0) traveled else null,
-            remainingDistance = if (withProgress > 0) remaining else null,
+            traveledMetres = if (withProgress > 0) traveled else null,
+            remainingMetres = if (withProgress > 0) remaining else null,
         )
     }
 

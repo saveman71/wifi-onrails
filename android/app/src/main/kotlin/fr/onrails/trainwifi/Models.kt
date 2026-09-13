@@ -1,5 +1,6 @@
 package fr.onrails.trainwifi
 
+import java.time.Duration
 import java.time.ZonedDateTime
 
 /** The two on-board portals. Same API shape, different hostnames. */
@@ -67,22 +68,49 @@ data class Stop(
 data class Trip(
     val stops: List<Stop>,
     val progressPercent: Int?,
-    /** Sum of traveledDistance over stops with progress data. Unit assumed to be km (unverified). */
-    val traveledDistance: Double?,
-    /** Sum of remainingDistance over stops with progress data. Unit assumed to be km (unverified). */
-    val remainingDistance: Double?,
+    /** Sum of traveledDistance over stops with progress data, in metres (as observed on wifi.sncf). */
+    val traveledMetres: Double?,
+    /** Sum of remainingDistance over stops with progress data, in metres. */
+    val remainingMetres: Double?,
 ) {
     val destination: Stop? get() = stops.lastOrNull()
 
-    /** First stop that still has distance to cover. */
-    val nextStop: Stop? get() = stops.firstOrNull { (it.remainingDistance ?: 0.0) > 0.0 }
+    /**
+     * Index of the next stop: the first one whose ETA is still ahead. Observed on board, the per-stop
+     * `progress` object does not mean "distance left to this stop", so time is the primary signal;
+     * remainingDistance > 0 is only the fallback when no stop carries a date. -1 when unknown or when
+     * every stop is behind us.
+     */
+    fun nextStopIndex(now: ZonedDateTime = ZonedDateTime.now()): Int {
+        if (stops.any { it.eta != null }) return stops.indexOfFirst { it.eta?.isAfter(now) == true }
+        return stops.indexOfFirst { (it.remainingDistance ?: 0.0) > 0.0 }
+    }
 
-    /** Stops from the next one to the destination. Falls back to all stops when no progress data is available. */
+    val nextStop: Stop? get() = stops.getOrNull(nextStopIndex())
+
+    /** Stops from the next one to the destination. All stops when the position is unknown. */
     val remainingStops: List<Stop>
         get() {
-            val index = stops.indexOfFirst { (it.remainingDistance ?: 0.0) > 0.0 }
+            val index = nextStopIndex()
             return if (index < 0) stops else stops.drop(index)
         }
+
+    /** 0..1 position of the train between the previous stop and the next one (time based). */
+    fun segmentFraction(now: ZonedDateTime = ZonedDateTime.now()): Float {
+        val index = nextStopIndex(now)
+        if (index <= 0) return 0f
+        val previous = stops[index - 1].eta
+        val next = stops[index].eta
+        if (previous != null && next != null && next.isAfter(previous)) {
+            val total = Duration.between(previous, next).toMillis().toFloat()
+            val done = Duration.between(previous, now).toMillis().toFloat()
+            return (done / total).coerceIn(0f, 1f)
+        }
+        val stop = stops[index]
+        val traveled = stop.traveledDistance ?: return 0.5f
+        val remaining = stop.remainingDistance ?: return 0.5f
+        return if (traveled + remaining > 0.0) (traveled / (traveled + remaining)).toFloat() else 0.5f
+    }
 }
 
 /** Everything the UI and the notification need. Written by the service, read by everyone else. */

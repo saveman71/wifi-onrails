@@ -252,8 +252,8 @@ class MainActivity : Activity() {
             return
         }
         statSpeed.text = Formatting.speed(state.gps) ?: "–"
-        statTraveled.text = trip.traveledDistance?.let { Formatting.km(it) } ?: "–"
-        statRemaining.text = trip.remainingDistance?.let { Formatting.km(it) } ?: "–"
+        statTraveled.text = trip.traveledMetres?.let { Formatting.km(it) } ?: "–"
+        statRemaining.text = trip.remainingMetres?.let { Formatting.km(it) } ?: "–"
         statsRow.visibility = View.VISIBLE
 
         timeline.setTrip(trip)

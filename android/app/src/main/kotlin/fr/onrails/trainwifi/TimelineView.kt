@@ -47,11 +47,8 @@ class TimelineView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     fun setTrip(trip: Trip) {
         stops = trip.stops
-        nextIndex = stops.indexOfFirst { (it.remainingDistance ?: 0.0) > 0.0 }
-        val next = stops.getOrNull(nextIndex)
-        val traveled = next?.traveledDistance ?: 0.0
-        val remaining = next?.remainingDistance ?: 0.0
-        segmentFraction = if (traveled + remaining > 0.0) (traveled / (traveled + remaining)).toFloat() else 0.5f
+        nextIndex = trip.nextStopIndex()
+        segmentFraction = trip.segmentFraction()
         requestLayout()
         invalidate()
     }

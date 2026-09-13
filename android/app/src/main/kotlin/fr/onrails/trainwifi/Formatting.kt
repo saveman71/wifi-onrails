@@ -30,7 +30,8 @@ object Formatting {
         return "${kmh.toInt()} km/h"
     }
 
-    fun km(value: Double): String = "${value.roundToInt()} km"
+    /** Metres in, "316 km" out. */
+    fun km(metres: Double): String = "${(metres / 1000.0).roundToInt()} km"
 
     /** Whole minutes from now to [t], or null when unknown or already past. */
     fun minutesUntil(t: ZonedDateTime?): Long? {

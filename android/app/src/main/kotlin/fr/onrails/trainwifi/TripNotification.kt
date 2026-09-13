@@ -8,13 +8,20 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.view.View
+import android.widget.RemoteViews
 
-/** Builds the ongoing, silent status notification from a [TrainState]. */
+/**
+ * Ongoing, silent status notification. With trip data it uses custom RemoteViews inside
+ * [Notification.DecoratedCustomViewStyle]: destination + ETA pill + brand progress bar collapsed,
+ * plus the remaining stops and the connection summary when expanded.
+ */
 class TripNotification(private val context: Context) {
 
     companion object {
         const val CHANNEL_ID = "trip_status"
         const val NOTIFICATION_ID = 1
+        private const val MAX_STOP_ROWS = 5
     }
 
     private val manager = context.getSystemService(NotificationManager::class.java)
@@ -71,29 +78,77 @@ class TripNotification(private val context: Context) {
             return idle(builder, state).build()
         }
 
-        // Title: "→ Grenoble 13:18 (+5 min)"
+        // Plain title/text are kept for accessibility, Wear and launchers that ignore custom views.
+        val subline = subline(state, trip)
         builder.setContentTitle("→ ${Formatting.stopLine(destination)}")
+            .setContentText(subline)
+            .setStyle(Notification.DecoratedCustomViewStyle())
+            .setCustomContentView(collapsedView(trip, destination, subline))
+            .setCustomBigContentView(expandedView(state, trip, destination, subline))
+        return builder.build()
+    }
 
-        // Text: "91% · 298 km/h · next: Valence 12:40"
+    /** "79% · 277 km/h · next: Lyon Part Dieu 18:58" */
+    private fun subline(state: TrainState, trip: Trip): String {
         val parts = mutableListOf<String>()
         trip.progressPercent?.let { parts += "$it%" }
         Formatting.speed(state.gps)?.let { parts += it }
-        trip.nextStop?.let { parts += "next: ${it.name} ${Formatting.time(it.eta)}" }
+        val next = trip.nextStop
+        if (next != null && next != trip.destination) parts += "next: ${next.name} ${Formatting.time(next.eta)}"
         if (state.phase == Phase.DEMO) parts += "demo"
-        builder.setContentText(parts.joinToString(" · "))
+        return parts.joinToString(" · ")
+    }
 
-        trip.progressPercent?.let { builder.setProgress(100, it, false) }
+    private fun header(views: RemoteViews, trip: Trip, destination: Stop, subline: String) {
+        views.setTextViewText(R.id.n_title, destination.name)
+        views.setTextViewText(R.id.n_eta, Formatting.time(destination.eta))
+        views.setTextViewText(R.id.n_sub, subline)
+        val percent = trip.progressPercent
+        if (percent != null) {
+            views.setProgressBar(R.id.n_progress, 100, percent, false)
+            views.setViewVisibility(R.id.n_progress, View.VISIBLE)
+        } else {
+            views.setViewVisibility(R.id.n_progress, View.GONE)
+        }
+    }
 
-        // Expanded: remaining stops with delay, then quota and Wi-Fi quality.
-        val lines = mutableListOf<String>()
-        trip.remainingStops.forEach { lines += Formatting.stopLine(it) }
-        lines += ""
-        state.connection?.let { lines += Formatting.quota(it) }
-        Formatting.wifi(state.statistics, state.barQueueEmpty)?.let { lines += it }
-        state.portal?.let { lines += "Portal ${it.host}" + if (state.phase == Phase.DEMO) " (demo data)" else "" }
-        builder.setStyle(Notification.BigTextStyle().bigText(lines.joinToString("\n").trim()))
+    private fun collapsedView(trip: Trip, destination: Stop, subline: String): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.notification_collapsed)
+        header(views, trip, destination, subline)
+        return views
+    }
 
-        return builder.build()
+    private fun expandedView(state: TrainState, trip: Trip, destination: Stop, subline: String): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.notification_expanded)
+        header(views, trip, destination, subline)
+
+        views.removeAllViews(R.id.n_stops)
+        val remaining = trip.remainingStops
+        for (stop in remaining.take(MAX_STOP_ROWS)) {
+            val row = RemoteViews(context.packageName, R.layout.notification_stop_row)
+            row.setTextViewText(R.id.n_row_time, Formatting.time(stop.eta))
+            row.setTextViewText(R.id.n_row_name, stop.name)
+            row.setImageViewResource(R.id.n_row_dot, if (stop == destination) R.drawable.dot_filled else R.drawable.dot_ring)
+            val delay = stop.delayMinutes ?: 0
+            row.setTextViewText(R.id.n_row_delay, if (delay > 0) "+$delay min" else "")
+            views.addView(R.id.n_stops, row)
+        }
+        if (remaining.size > MAX_STOP_ROWS) {
+            val more = RemoteViews(context.packageName, R.layout.notification_stop_row)
+            more.setTextViewText(R.id.n_row_time, "")
+            more.setViewVisibility(R.id.n_row_dot, View.INVISIBLE)
+            more.setTextViewText(R.id.n_row_name, "… ${remaining.size - MAX_STOP_ROWS} more stops")
+            more.setTextViewText(R.id.n_row_delay, "")
+            views.addView(R.id.n_stops, more)
+        }
+
+        val footer = mutableListOf<String>()
+        state.connection?.let { footer += "${Formatting.mb(it.remainingMb)} left of ${Formatting.mb(it.totalMb)}" }
+        Formatting.wifi(state.statistics, state.barQueueEmpty)?.let { footer += it }
+        state.portal?.let { footer += it.host + if (state.phase == Phase.DEMO) " (demo)" else "" }
+        views.setTextViewText(R.id.n_footer, footer.joinToString(" · "))
+        views.setViewVisibility(R.id.n_footer, if (footer.isEmpty()) View.GONE else View.VISIBLE)
+        return views
     }
 
     private fun idle(builder: Notification.Builder, state: TrainState): Notification.Builder {

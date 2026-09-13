@@ -124,7 +124,7 @@ The screen follows the portal's look: INOUI burgundy accents, navy labels, soft 
 cards, light and dark palettes (`values/colors.xml`, `values-night/colors.xml`), no UI library.
 
 - **Hero card**: destination, ETA pill, "Arrival in N min, on time / +N min", progress bar.
-- **Stat tiles**: train speed, km traveled, km until arrival (sums of the stops' `progress`).
+- **Stat tiles**: train speed, km traveled, km until arrival (sums of the stops' `progress`, metres in the API).
 - **Route**: a timeline drawn on canvas, passed stops filled, upcoming stops as rings, the train
   marker on the current segment, delays in burgundy.
 - **Connection**: Wi-Fi quality dots, data quota bar, bandwidth, devices, bar queue.
@@ -159,9 +159,11 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
 - **Activation payload.** `{"without21NetConnection":false}` with `Origin`, `Referer` and a desktop
   Chrome `User-Agent` is what works with curl on `wifi.sncf`. Whether `wifi.normandie.fr` accepts
   the same call, and whether the payload is still current, is unknown. The response is logged raw.
-- **Distance unit.** The stat tiles print the sums of `progress.traveledDistance` and
-  `progress.remainingDistance` as kilometres. The portal shows 261 km traveled / 137 km until
-  arrival, which is consistent with km, but the raw field values have not been compared yet.
+- **Per-stop `progress` semantics.** On board, a stop already passed still had
+  `remainingDistance > 0`, so that field does not mean "distance left to this stop". The next stop
+  is therefore chosen by time (first ETA still ahead) and `remainingDistance` is only a fallback
+  when no stop carries a date. The sums over all stops do match the portal's trip totals, and
+  their unit is metres (verified: 315 780 m traveled + 82 053 m left = the portal's 398 km trip).
 - **Redirect and TLS behaviour** of the portals on Android (certificate chain, https to http hops)
   has only been reasoned about, not observed.
 - **Name fields.** Stops prefer `name`, then `label`, then `location.name`. If `name` is a code
@@ -175,8 +177,10 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
 - `foregroundServiceType="specialUse"` with `PROPERTY_SPECIAL_USE_FGS_SUBTYPE`, not `dataSync`:
   Android 15 caps `dataSync` at 6 h per day, a train trip can be longer.
 - `START_STICKY`, `startForeground` immediately in `onStartCommand`.
-- Notification: `IMPORTANCE_LOW` channel, `setOnlyAlertOnce(true)`, `setShowWhen(false)`,
-  `CATEGORY_STATUS`, ongoing, a Stop action.
+- Notification: custom RemoteViews in `DecoratedCustomViewStyle` (destination, ETA pill, brand
+  progress bar; expanded: the remaining stops with delays, then quota and Wi-Fi quality).
+  `IMPORTANCE_LOW` channel, `setOnlyAlertOnce(true)`, `setShowWhen(false)`, `CATEGORY_STATUS`,
+  ongoing, a Stop action.
 - The `/router/api/pepita` socket.io namespace is not used: polling every 15 s is enough and avoids
   a dependency.
 - minSdk 29, target/compile 35, Kotlin 2.0.21, AGP 8.7.3, JVM target 17, Gradle 8.10.2.

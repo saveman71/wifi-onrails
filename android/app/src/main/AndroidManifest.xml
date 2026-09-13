@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Lets the app ask once to be exempt from battery optimisations: required on Android 12+ to
+         start the foreground service from the Wi-Fi watch receiver, and to keep network access
+         for the portal probe while the phone dozes in a pocket. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- No location permission on purpose: the train is detected by probing the
          portal API over the Wi-Fi network, not by reading the SSID. -->
@@ -40,6 +45,26 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps the on-board train Wi-Fi connected and shows live trip information in an ongoing notification" />
         </service>
+
+        <!-- Woken by the system through the PendingIntent registered with
+             ConnectivityManager.registerNetworkCallback when a Wi-Fi network appears. -->
+        <receiver
+            android:name=".WifiWatchReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".WatchJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 
 </manifest>

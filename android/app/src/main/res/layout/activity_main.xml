@@ -459,6 +459,40 @@
                 android:layout_marginStart="12dp" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/battery_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="18dp"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/Text.Section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_battery"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/battery_status"
+                style="@style/Text.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_battery"
+                style="@style/Button.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/btn_battery" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/status_message"
             style="@style/Text.Body"

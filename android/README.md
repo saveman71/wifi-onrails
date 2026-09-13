@@ -8,6 +8,40 @@ It is a proof of concept: plain Kotlin, platform APIs, two third-party dependenc
 (`kotlinx-coroutines` for `StateFlow`, `osmdroid` for the map). No location permission: the map
 shows the train's own GPS from the portal, not the phone's.
 
+## Always on, without running all the time
+
+Between trips nothing runs and nothing is shown. The app wakes up when the phone joins a Wi-Fi
+that turns out to be a train:
+
+1. **Wi-Fi watch.** `ConnectivityManager.registerNetworkCallback` with a *PendingIntent*
+   (`AutoConnect.arm`). The system fires `WifiWatchReceiver` whenever a Wi-Fi network appears,
+   validated or not, even if the app process is dead. No location permission involved.
+2. **Probe, then start.** The receiver probes `/connection/status` on both portals over that
+   network (3 s connect, 4 s read). At home this is one fast failure and the app goes back to
+   sleep. On a train the foreground service starts and the trip card appears.
+3. **Self-stop.** The service goes to standby 2 min after the Wi-Fi is gone (long enough for a
+   tunnel), or after 10 min on a Wi-Fi with no portal, and re-arms the watch on the way out.
+4. **Reboot.** `BootReceiver` (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`) re-arms the watch when
+   auto-connect is enabled. Wi-Fi suggestions themselves survive reboots.
+5. **Safety net.** A persisted `JobScheduler` job (`WatchJobService`, every 15 min) repeats the
+   probe if a Wi-Fi is present and the service is not running, for the case where the portal was
+   down at the moment the Wi-Fi connected.
+
+**Battery optimisation exemption.** Android 12+ refuses foreground-service starts from a background
+receiver unless the app is exempt from battery optimisation; the exemption also keeps network
+access for the probe while the phone dozes in a pocket. The app shows a "Background start" card
+with the system dialog until it is granted. Without it, the receiver posts a "Train Wi-Fi detected"
+notification instead and a tap on Connect starts the service (user interaction is always allowed).
+
+**Buttons.** *Enable auto-connect* registers the Wi-Fi suggestions, arms the watch, schedules the
+job and probes the current Wi-Fi right away. *Disable* (also the notification's Stop action) turns
+all of that off; a plain stop would be undone by the watcher within seconds on a train.
+
+Why not the obvious alternatives: manifest receivers for Wi-Fi state changes are blocked since
+Android 7/8; JobScheduler's network constraint only fires on *validated* networks, which a captive
+portal never is until activated; the network-suggestion post-connection broadcast requires location
+permission and, from the background, "Allow all the time".
+
 ## How it works
 
 1. **Auto-join.** `WifiManager.addNetworkSuggestions` registers one open-network suggestion per
@@ -32,7 +66,10 @@ Files, all under `app/src/main/kotlin/fr/onrails/trainwifi/`:
 
 | File | Role |
 | --- | --- |
-| `TrainWifiService.kt` | Foreground service (`specialUse`), network callback, poll loop, demo loop |
+| `AutoConnect.kt` | Arms/disarms the Wi-Fi watch, schedules the safety-net job, probe-then-start logic, battery exemption |
+| `WifiWatchReceiver.kt`, `BootReceiver.kt`, `WatchJobService.kt` | Entry points: Wi-Fi available, reboot / update, periodic check |
+| `PortalDetector.kt` | Probes both portals on a network; shared by the receiver, the job and the service |
+| `TrainWifiService.kt` | Foreground service (`specialUse`), network callback, poll loop, self-stop to standby, demo loop |
 | `PortalClient.kt` | `HttpURLConnection` bound to the Wi-Fi `Network`, manual redirects (3 hops) |
 | `PortalApi.kt` | The five endpoints plus activation |
 | `Parsers.kt` | Tolerant `org.json` parsing of both stop shapes, ISO date handling |
@@ -75,17 +112,19 @@ manager / browser you use).
 ## First run: what to approve
 
 1. Open **Train Wi-Fi**, check the SSID list, press **Enable auto-connect**.
-2. Android 13+: allow **notifications** (the trip info lives there; the service runs even if you
+2. Press **Allow background start** and accept the system dialog (battery optimisation exemption).
+   This is what lets the app wake up on the train weeks later without you opening it.
+3. Android 13+: allow **notifications** (the trip info lives there; the service runs even if you
    refuse, but you will not see anything).
-3. Android 11+: a system dialog asks to let the app **suggest networks**. Accept. On Android 10 the
+4. Android 11+: a system dialog asks to let the app **suggest networks**. Accept. On Android 10 the
    question arrives later as a notification the first time a suggested network is in range.
    If the app was previously refused, `addNetworkSuggestions` returns `APP_DISALLOWED` and the app
    shows where to fix it: Settings > Network & internet > Internet > Network preferences >
    *Apps that can suggest networks* (wording varies by vendor).
-4. **Turn off any VPN** (NextDNS, WireGuard, corporate VPN: anything that shows the key icon in
+5. **Turn off any VPN** (NextDNS, WireGuard, corporate VPN: anything that shows the key icon in
    the status bar), or exclude Train Wi-Fi from it if the VPN app allows it. See below.
-5. Optional but recommended: exclude the app from battery optimisation so the poll loop is not
-   throttled on long trips.
+6. With a VPN on, the background probe fails silently (EPERM), so auto-start cannot detect the
+   train; open the app and press Enable, and the service will tell you the VPN is in the way.
 
 Then put the phone in your pocket. When a listed SSID appears the phone joins it, the service sees
 the Wi-Fi network, finds the portal, activates it and the notification switches from
@@ -101,9 +140,9 @@ the Wi-Fi network, finds the portal, activates it and the notification switches 
   Wi-Fi quality 5/5 · 126 devices · bar queue busy
 ```
 
-**Stop** (button or notification action) ends the service and removes the notification. The Wi-Fi
-suggestions stay registered until you edit the list; **Save & apply SSIDs** removes all previous
-suggestions and registers the new list.
+**Disable** (button or the notification's Stop action) turns auto-connect off entirely: service,
+watch and periodic job. The Wi-Fi suggestions stay registered until you edit the list;
+**Save & apply SSIDs** removes all previous suggestions and registers the new list.
 
 ## Known limitation: VPNs
 
@@ -181,6 +220,10 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
   and `location`. Whether wifi.sncf or wifi.normandie.fr actually send coordinates, and under which
   names, is unknown: without them the map shows the train only. The raw `/train/details` line in
   the log tells.
+- **Wake-up path.** The PendingIntent network callback, the receiver's probe budget and the
+  background foreground-service start with the battery exemption are implemented from the platform
+  documentation and have not yet been observed end to end on a real boarding. The log records each
+  step ("Wi-Fi watch: ...", "Periodic check: ...") so a missed wake-up can be diagnosed.
 - **Redirect and TLS behaviour** of the portals on Android (certificate chain, https to http hops)
   has only been reasoned about, not observed.
 - **Name fields.** Stops prefer `name`, then `label`, then `location.name`. If `name` is a code

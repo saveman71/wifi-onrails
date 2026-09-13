@@ -1,0 +1,135 @@
+package fr.onrails.trainwifi
+
+import android.app.PendingIntent
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings as SystemSettings
+import java.util.concurrent.TimeUnit
+
+/**
+ * The always-on part, designed so that nothing runs between trips:
+ *
+ * 1. A [ConnectivityManager.registerNetworkCallback] with a PendingIntent. The system fires
+ *    [WifiWatchReceiver] whenever a Wi-Fi network appears, even if the app process is dead.
+ * 2. The receiver probes the portal over that network and starts [TrainWifiService] only if a
+ *    train answers. At home the probe fails fast and nothing else happens.
+ * 3. The service stops itself when the Wi-Fi is gone or turns out not to be a train, then re-arms.
+ * 4. [BootReceiver] re-arms after a reboot, and a persisted 15-minute [WatchJobService] is a safety
+ *    net for a missed event (for instance the portal being down when the Wi-Fi connected).
+ *
+ * Android 12+ lets a background receiver start a foreground service only if the app is exempt
+ * from battery optimisations (the exemption also keeps network access during Doze). Without it,
+ * [onWifiAvailable] falls back to a tappable "train detected" notification.
+ */
+object AutoConnect {
+
+    private const val WATCH_REQUEST_CODE = 100
+    private const val WATCH_JOB_ID = 1
+
+    fun enable(context: Context) {
+        Settings(context).setAutoConnectEnabled(true)
+        arm(context)
+        scheduleWatchJob(context)
+        AppState.log("Auto-connect enabled: watching for Wi-Fi networks")
+        AppState.update { if (it.phase == Phase.STOPPED) TrainState(phase = Phase.STANDBY) else it }
+    }
+
+    fun disable(context: Context) {
+        Settings(context).setAutoConnectEnabled(false)
+        disarm(context)
+        cancelWatchJob(context)
+        AppState.log("Auto-connect disabled")
+    }
+
+    /** Ask the system to wake [WifiWatchReceiver] when a Wi-Fi network (validated or not) is available. */
+    fun arm(context: Context) {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val request = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build()
+        connectivity.registerNetworkCallback(request, watchIntent(context))
+    }
+
+    fun disarm(context: Context) {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        try {
+            connectivity.unregisterNetworkCallback(watchIntent(context))
+        } catch (e: IllegalArgumentException) {
+            // Not registered (e.g. after a reboot): nothing to do.
+        }
+    }
+
+    private fun watchIntent(context: Context): PendingIntent {
+        val intent = Intent(context, WifiWatchReceiver::class.java).setAction(WifiWatchReceiver.ACTION_WIFI_AVAILABLE)
+        // Mutable so the system can attach EXTRA_NETWORK to the delivered intent.
+        return PendingIntent.getBroadcast(context, WATCH_REQUEST_CODE, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    }
+
+    private fun scheduleWatchJob(context: Context) {
+        val scheduler = context.getSystemService(JobScheduler::class.java)
+        val job = JobInfo.Builder(WATCH_JOB_ID, ComponentName(context, WatchJobService::class.java))
+            .setPeriodic(TimeUnit.MINUTES.toMillis(15))
+            .setPersisted(true)
+            .build()
+        scheduler.schedule(job)
+    }
+
+    private fun cancelWatchJob(context: Context) {
+        context.getSystemService(JobScheduler::class.java).cancel(WATCH_JOB_ID)
+    }
+
+    /**
+     * Shared by the receiver and the job: probe the Wi-Fi network and start the service if it is a
+     * train. Runs on a worker thread. Returns true when the service was started.
+     */
+    fun onWifiAvailable(context: Context, hint: Network?, source: String): Boolean {
+        if (!Settings(context).autoConnectEnabled()) return false
+        if (AppState.state.value.phase.isRunning()) return false
+
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val network = hint ?: PortalDetector.findWifiNetwork(connectivity)
+        if (network == null) {
+            AppState.log("$source: no Wi-Fi network, staying in standby")
+            return false
+        }
+        AppState.log("$source: Wi-Fi $network available, probing for a train portal")
+        val detection = PortalDetector.quickDetect(network)
+        if (detection.api == null) {
+            AppState.log(
+                if (detection.bindingRefused) "$source: socket binding refused (VPN active?), staying in standby"
+                else "$source: not a train, staying in standby",
+            )
+            return false
+        }
+        return startServiceOrNotify(context, detection.api.portal)
+    }
+
+    private fun startServiceOrNotify(context: Context, portal: Portal): Boolean {
+        try {
+            TrainWifiService.start(context)
+            AppState.log("Train portal ${portal.host} found, service started")
+            return true
+        } catch (e: Exception) {
+            // Android 12+: ForegroundServiceStartNotAllowedException unless exempt from battery optimisations.
+            AppState.log("Cannot start the service from the background (${e.javaClass.simpleName}); posting a tap-to-connect notification")
+            TripNotification(context).showTrainDetected(portal)
+            return false
+        }
+    }
+
+    fun isExemptFromBatteryOptimizations(context: Context): Boolean =
+        context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
+
+    /** System dialog asking to exempt the app; needs REQUEST_IGNORE_BATTERY_OPTIMIZATIONS. */
+    fun requestBatteryExemptionIntent(context: Context): Intent =
+        Intent(SystemSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+
+    fun Phase.isRunning(): Boolean = this != Phase.STOPPED && this != Phase.STANDBY
+}

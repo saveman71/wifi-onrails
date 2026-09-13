@@ -25,6 +25,7 @@ class TripNotification(private val context: Context) {
         /** Default importance with sound and vibration off: stays on the lock screen, never rings. */
         const val CHANNEL_LOCK_SCREEN = "trip_status_lockscreen"
         const val NOTIFICATION_ID = 1
+        const val DETECTED_NOTIFICATION_ID = 2
         private const val MAX_STOP_ROWS = 5
     }
 
@@ -55,6 +56,32 @@ class TripNotification(private val context: Context) {
         manager.createNotificationChannel(quiet)
         manager.createNotificationChannel(lockScreen)
     }
+
+    /**
+     * Fallback when the background start of the service is refused (Android 12+ without the battery
+     * optimisation exemption): a normal notification whose action starts the service, which counts
+     * as a user interaction and is therefore allowed.
+     */
+    fun showTrainDetected(portal: Portal) {
+        val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        val start = Intent(context, TrainWifiService::class.java).setAction(TrainWifiService.ACTION_START)
+        val connect = PendingIntent.getForegroundService(context, 2, start, flags)
+        val openApp = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), flags)
+        val n = Notification.Builder(context, CHANNEL_LOCK_SCREEN)
+            .setSmallIcon(R.drawable.ic_train)
+            .setColor(context.getColor(R.color.brand_red))
+            .setContentTitle("Train Wi-Fi detected (${portal.host})")
+            .setContentText("Tap Connect to activate the portal and follow the trip")
+            .setCategory(Notification.CATEGORY_STATUS)
+            .setAutoCancel(true)
+            .setContentIntent(connect)
+            .addAction(Notification.Action.Builder(Icon.createWithResource(context, R.drawable.ic_train), "Connect", connect).build())
+            .addAction(Notification.Action.Builder(Icon.createWithResource(context, R.drawable.ic_stop), "Open app", openApp).build())
+            .build()
+        manager.notify(DETECTED_NOTIFICATION_ID, n)
+    }
+
+    fun cancelTrainDetected() = manager.cancel(DETECTED_NOTIFICATION_ID)
 
     private fun channelId(): String = if (settings.keepOnLockScreen()) CHANNEL_LOCK_SCREEN else CHANNEL_QUIET
 

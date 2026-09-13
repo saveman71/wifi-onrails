@@ -41,6 +41,12 @@ class TrainWifiService : Service() {
         const val NO_PORTAL_RETRY_MAX_MS = 120_000L
         const val VPN_RETRY_MS = 15_000L
 
+        /** Wi-Fi gone (left the train, or a long tunnel): wait this long before going to standby. */
+        const val WIFI_LOST_GRACE_MS = 2 * 60_000L
+
+        /** Wi-Fi present but no portal answering for this long: not a train, go to standby. */
+        const val NO_PORTAL_GIVE_UP_MS = 10 * 60_000L
+
         const val VPN_HINT = "Android refuses to bind this app's sockets to the Wi-Fi while a " +
             "non-bypassable VPN (key icon in the status bar) is active. Turn the VPN off, or exclude " +
             "Train Wi-Fi from it, and the portal will be probed again within 15 s."
@@ -67,12 +73,15 @@ class TrainWifiService : Service() {
     // Touched only on the main thread (callbacks are delivered on the main looper).
     private var wifiNetwork: Network? = null
     private var worker: Job? = null
+    private var lostTimer: Job? = null
     private var demoMode = false
+    private lateinit var settings: Settings
 
     private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             if (network == wifiNetwork) return
             AppState.log("Wi-Fi network available: $network")
+            lostTimer?.cancel()
             wifiNetwork = network
             if (!demoMode) startPolling(network)
         }
@@ -83,7 +92,12 @@ class TrainWifiService : Service() {
             wifiNetwork = null
             if (!demoMode) {
                 worker?.cancel()
-                publish(TrainState(phase = Phase.WAITING_WIFI, message = "Wi-Fi lost"))
+                publish(TrainState(phase = Phase.WAITING_WIFI, message = "Wi-Fi lost, standby in ${WIFI_LOST_GRACE_MS / 60_000} min unless it comes back"))
+                lostTimer?.cancel()
+                lostTimer = scope.launch {
+                    delay(WIFI_LOST_GRACE_MS)
+                    standby("Wi-Fi did not come back")
+                }
             }
         }
     }
@@ -91,8 +105,10 @@ class TrainWifiService : Service() {
     override fun onCreate() {
         super.onCreate()
         connectivity = getSystemService(ConnectivityManager::class.java)
+        settings = Settings(this)
         notification = TripNotification(this)
         notification.createChannels()
+        notification.cancelTrainDetected()
 
         // TRANSPORT_WIFI only. Deliberately no NET_CAPABILITY_VALIDATED: the captive-portal
         // network is exactly the unvalidated one we need to see.
@@ -109,7 +125,9 @@ class TrainWifiService : Service() {
 
         when (intent?.action) {
             ACTION_STOP -> {
+                // Stop means stop for good: otherwise the watcher would restart us on the next poll.
                 AppState.log("Stopped by user")
+                AutoConnect.disable(this)
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -132,10 +150,18 @@ class TrainWifiService : Service() {
     override fun onDestroy() {
         scope.cancel()
         connectivity.unregisterNetworkCallback(wifiCallback)
-        AppState.update { TrainState(phase = Phase.STOPPED) }
+        val armed = settings.autoConnectEnabled()
+        AppState.update { TrainState(phase = if (armed) Phase.STANDBY else Phase.STOPPED) }
         stopForeground(STOP_FOREGROUND_REMOVE)
-        AppState.log("Service destroyed")
+        if (armed) AutoConnect.arm(this) // wake us again on the next Wi-Fi network
+        AppState.log(if (armed) "Service stopped, standby (watch armed)" else "Service stopped")
         super.onDestroy()
+    }
+
+    /** Leave the foreground; the armed watch (see onDestroy) brings us back on the next train. */
+    private fun standby(reason: String) {
+        AppState.log("Standby: $reason")
+        stopSelf()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -186,15 +212,21 @@ class TrainWifiService : Service() {
         var reportedValid = false
         var failures = 0
         var noPortalDelay = NO_PORTAL_RETRY_MIN_MS
+        var noPortalSince = 0L
 
         publish(TrainState(phase = Phase.PROBING, message = "Probing wifi.sncf then wifi.normandie.fr"))
 
         while (coroutineContext.isActive) {
             try {
                 if (api == null) {
-                    val detection = detectPortal(client)
+                    val detection = PortalDetector.detect(client)
                     api = detection.api
                     if (api == null) {
+                        if (noPortalSince == 0L) noPortalSince = System.currentTimeMillis()
+                        if (System.currentTimeMillis() - noPortalSince > NO_PORTAL_GIVE_UP_MS && !demoMode) {
+                            standby("no train portal on this Wi-Fi for ${NO_PORTAL_GIVE_UP_MS / 60_000} min")
+                            return
+                        }
                         if (detection.bindingRefused || isVpnActive()) {
                             // netd returns EPERM for Network.bindSocket when a secure VPN applies to
                             // this UID. Nothing to do but wait for the VPN to go away, so poll fast.
@@ -209,6 +241,7 @@ class TrainWifiService : Service() {
                     }
                     noPortalDelay = NO_PORTAL_RETRY_MIN_MS
                 }
+                noPortalSince = 0L
                 val portal: PortalApi = api
 
                 var status = portal.connectionStatus()
@@ -262,25 +295,6 @@ class TrainWifiService : Service() {
             }
             delay(POLL_INTERVAL_MS)
         }
-    }
-
-    private class Detection(val api: PortalApi?, val bindingRefused: Boolean)
-
-    private fun detectPortal(client: PortalClient): Detection {
-        var bindingRefused = false
-        for (portal in Portal.entries) {
-            val api = PortalApi(client, portal)
-            try {
-                api.connectionStatus()
-                AppState.log("Portal detected: ${portal.baseUrl}")
-                return Detection(api, false)
-            } catch (e: Exception) {
-                AppState.log("No portal at ${portal.host}: ${e.javaClass.simpleName} ${e.message ?: ""}".trim())
-                if (e.message?.contains("EPERM") == true) bindingRefused = true
-            }
-        }
-        if (bindingRefused) AppState.log("Socket binding refused (EPERM): a VPN is routing this app. $VPN_HINT")
-        return Detection(null, bindingRefused)
     }
 
     /** True when the network Android would use for this app is a VPN. */

@@ -22,6 +22,7 @@ class Settings(context: Context) {
         private const val KEY_SSIDS = "ssids" // newline separated, keeps order
         private const val KEY_ADVANCED = "advanced_expanded"
         private const val KEY_LOCK_SCREEN = "lock_screen"
+        private const val KEY_AUTO_CONNECT = "auto_connect"
     }
 
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -40,6 +41,13 @@ class Settings(context: Context) {
     fun resetSsids(): List<String> {
         prefs.edit().remove(KEY_SSIDS).apply()
         return DEFAULT_SSIDS
+    }
+
+    /** True between "Enable auto-connect" and "Disable": the watcher is armed and may start the service. */
+    fun autoConnectEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_CONNECT, false)
+
+    fun setAutoConnectEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_CONNECT, enabled).apply()
     }
 
     /** Post the notification on a default-importance (still silent) channel so it stays on the lock screen. */

@@ -13,7 +13,8 @@ enum class Portal(val baseUrl: String, val label: String) {
 }
 
 enum class Phase(val title: String) {
-    STOPPED("Stopped"),
+    STOPPED("Auto-connect disabled"),
+    STANDBY("Standby, watching for train Wi-Fi"),
     WAITING_WIFI("Waiting for train Wi-Fi"),
     PROBING("Wi-Fi connected, looking for a train portal"),
     NO_PORTAL("Wi-Fi connected, no train portal found"),

@@ -55,6 +55,8 @@ class MainActivity : Activity() {
     private lateinit var dataProgress: ProgressBar
     private lateinit var connectionLine2: TextView
     private lateinit var statusMessage: TextView
+    private lateinit var batteryCard: View
+    private lateinit var batteryStatus: TextView
     private lateinit var advancedToggle: TextView
     private lateinit var advancedSection: View
     private lateinit var ssidEdit: EditText
@@ -77,10 +79,21 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btn_enable).setOnClickListener {
             withNotificationPermission {
                 registerSuggestions(settings.ssids())
-                TrainWifiService.start(this)
+                AutoConnect.enable(this)
+                // Already on a Wi-Fi? Probe it right away instead of waiting for the next network event.
+                Thread { AutoConnect.onWifiAvailable(applicationContext, null, "Enable") }.start()
+                if (!AutoConnect.isExemptFromBatteryOptimizations(this)) {
+                    Toast.makeText(this, "Allow background start below so the app can wake up on the train", Toast.LENGTH_LONG).show()
+                }
             }
         }
-        findViewById<Button>(R.id.btn_stop).setOnClickListener { TrainWifiService.stop(this) }
+        findViewById<Button>(R.id.btn_stop).setOnClickListener {
+            AutoConnect.disable(this)
+            TrainWifiService.stop(this)
+        }
+        findViewById<Button>(R.id.btn_battery).setOnClickListener {
+            startActivity(AutoConnect.requestBatteryExemptionIntent(this))
+        }
         findViewById<Button>(R.id.btn_demo).setOnClickListener {
             withNotificationPermission { TrainWifiService.demo(this) }
         }
@@ -137,6 +150,8 @@ class MainActivity : Activity() {
         dataProgress = findViewById(R.id.data_progress)
         connectionLine2 = findViewById(R.id.connection_line2)
         statusMessage = findViewById(R.id.status_message)
+        batteryCard = findViewById(R.id.battery_card)
+        batteryStatus = findViewById(R.id.battery_status)
         advancedToggle = findViewById(R.id.advanced_toggle)
         advancedSection = findViewById(R.id.advanced_section)
         ssidEdit = findViewById(R.id.ssid_edit)
@@ -154,6 +169,17 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         trainMap.onResume()
+        renderBattery()
+        // Service not running but auto-connect armed: show standby rather than "disabled".
+        if (AppState.state.value.phase == Phase.STOPPED && settings.autoConnectEnabled()) {
+            AppState.update { TrainState(phase = Phase.STANDBY) }
+        }
+    }
+
+    private fun renderBattery() {
+        val exempt = AutoConnect.isExemptFromBatteryOptimizations(this)
+        batteryCard.visibility = if (exempt) View.GONE else View.VISIBLE
+        batteryStatus.text = getString(R.string.hint_battery)
     }
 
     override fun onPause() {
@@ -214,6 +240,7 @@ class MainActivity : Activity() {
         renderConnection(state)
         statusMessage.text = when {
             state.phase == Phase.STOPPED -> getString(R.string.hint_idle)
+            state.phase == Phase.STANDBY -> getString(R.string.hint_standby)
             state.updatedAtMillis > 0 -> {
                 val t = ZonedDateTime.ofInstant(Instant.ofEpochMilli(state.updatedAtMillis), Parsers.PARIS)
                 "Updated ${Formatting.timeWithSeconds(t)}" + (state.portal?.let { ", ${it.host}" } ?: "")
@@ -224,6 +251,7 @@ class MainActivity : Activity() {
 
     private fun chipLabel(phase: Phase): String = when (phase) {
         Phase.STOPPED -> "Off"
+        Phase.STANDBY -> "Standby"
         Phase.WAITING_WIFI -> "Waiting"
         Phase.PROBING -> "Probing"
         Phase.NO_PORTAL -> "No portal"

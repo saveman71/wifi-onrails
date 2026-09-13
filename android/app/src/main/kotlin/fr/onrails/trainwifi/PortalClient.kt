@@ -17,7 +17,11 @@ import java.net.URL
  * Redirects are followed by hand (max [MAX_REDIRECTS] hops) so that an https -> http hop does not
  * silently fail: HttpURLConnection refuses to follow redirects across protocols.
  */
-class PortalClient(private val network: Network) {
+class PortalClient(
+    private val network: Network,
+    private val connectTimeoutMs: Int = CONNECT_TIMEOUT_MS,
+    private val readTimeoutMs: Int = READ_TIMEOUT_MS,
+) {
 
     companion object {
         const val CONNECT_TIMEOUT_MS = 4_000
@@ -49,8 +53,8 @@ class PortalClient(private val network: Network) {
         val conn = network.openConnection(URL(url)) as HttpURLConnection
         try {
             conn.instanceFollowRedirects = false
-            conn.connectTimeout = CONNECT_TIMEOUT_MS
-            conn.readTimeout = READ_TIMEOUT_MS
+            conn.connectTimeout = connectTimeoutMs
+            conn.readTimeout = readTimeoutMs
             conn.requestMethod = method
             conn.setRequestProperty("User-Agent", USER_AGENT)
             conn.setRequestProperty("Accept", "application/json")

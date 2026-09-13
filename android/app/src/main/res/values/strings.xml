@@ -2,7 +2,11 @@
 <resources>
     <string name="app_name">Train Wi-Fi</string>
     <string name="btn_enable">Enable auto-connect</string>
-    <string name="btn_stop">Stop</string>
+    <string name="btn_stop">Disable</string>
+    <string name="btn_battery">Allow background start</string>
+    <string name="label_battery">Background start</string>
+    <string name="hint_battery">Android only lets the app start from the background on the train if it is exempt from battery optimisation. Without it you get a “Train Wi-Fi detected” notification to tap instead.</string>
+    <string name="hint_standby">Armed. Nothing runs until a Wi-Fi network appears; then the portal is probed and the trip card starts only on a train.</string>
     <string name="btn_demo">Demo trip</string>
     <string name="btn_save_ssids">Save &amp; apply</string>
     <string name="btn_reset_ssids">Reset defaults</string>
@@ -17,7 +21,7 @@
     <string name="stat_traveled">traveled</string>
     <string name="stat_remaining">until arrival</string>
     <string name="status_stopped">Stopped</string>
-    <string name="hint_idle">Press “Enable auto-connect”, approve the Wi-Fi suggestions, then just board the train.</string>
+    <string name="hint_idle">Press “Enable auto-connect”, approve the Wi-Fi suggestions and the background start, then forget about it: the app wakes up on the train and sleeps in between.</string>
     <string name="label_lockscreen">Keep on lock screen</string>
     <string name="hint_lockscreen">Posts the card on a non-silent channel with sound off, so Android keeps it on the lock screen.</string>
     <string name="notification_channel_name">Trip status (silent)</string>

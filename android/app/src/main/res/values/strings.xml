@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Train Wi-Fi</string>
+    <string name="btn_enable">Enable auto-connect</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_demo">Demo trip</string>
+    <string name="btn_save_ssids">Save &amp; apply SSIDs</string>
+    <string name="btn_reset_ssids">Reset defaults</string>
+    <string name="btn_copy_log">Copy log</string>
+    <string name="label_ssids">Train Wi-Fi SSIDs (one per line, open networks)</string>
+    <string name="label_log">Log (newest first, last 200 entries)</string>
+    <string name="status_stopped">Stopped</string>
+    <string name="notification_channel_name">Trip status</string>
+    <string name="notification_channel_description">Ongoing train Wi-Fi and trip information</string>
+    <string name="notification_waiting">Waiting for train Wi-Fi</string>
+</resources>

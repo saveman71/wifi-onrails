@@ -63,6 +63,13 @@ Delayed stops: Grenoble is delayed by 5 minutes
 Bar queue is not empty
 ```
 
+## Android app
+
+An Android proof of concept lives in [`android/`](android/). It auto-joins the train Wi-Fi via
+network suggestions, clears the captive portal and shows destination, ETA, delay, progress and speed
+in a permanent notification. See [android/README.md](android/README.md) for build, install and the
+list of things still to verify on board.
+
 ## Acknowledgments
 
 Thanks to [Vulpine Citrus](https://vulpinecitrus.info/blog/the-sncf-wifi-api) for insights into the SNCF WiFi API.

@@ -46,6 +46,7 @@ class TripNotification(private val context: Context) {
 
         val builder = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_train)
+            .setColor(context.getColor(R.color.brand_red))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)

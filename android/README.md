@@ -37,7 +37,8 @@ Files, all under `app/src/main/kotlin/fr/onrails/trainwifi/`:
 | `Parsers.kt` | Tolerant `org.json` parsing of both stop shapes, ISO date handling |
 | `Models.kt` | Data classes, `Trip` progress / next stop / destination logic |
 | `TripNotification.kt` | Ongoing silent notification with progress bar and `BigTextStyle` |
-| `MainActivity.kt` | Status card, buttons, SSID editor, log view |
+| `MainActivity.kt` | Hero card (destination, ETA, progress), stat tiles, connection card, buttons, Advanced section |
+| `TimelineView.kt` | Canvas-drawn route timeline: passed/upcoming stops, train marker, delays |
 | `WifiSuggestions.kt`, `Settings.kt` | Suggestions API wrapper, persisted SSID list |
 | `DemoData.kt` | Canned JSON for both portals, used by "Demo trip" |
 
@@ -117,12 +118,25 @@ Fixes, by preference: disable the VPN for the trip, exclude the app in the VPN's
 (only possible if that VPN app offers per-app exclusion or "allow bypass"), or for DNS-filter apps
 like NextDNS use Android's *Private DNS* setting instead of the app, which is not a VPN.
 
+## App UI
+
+The screen follows the portal's look: INOUI burgundy accents, navy labels, soft grey rounded
+cards, light and dark palettes (`values/colors.xml`, `values-night/colors.xml`), no UI library.
+
+- **Hero card**: destination, ETA pill, "Arrival in N min, on time / +N min", progress bar.
+- **Stat tiles**: train speed, km traveled, km until arrival (sums of the stops' `progress`).
+- **Route**: a timeline drawn on canvas, passed stops filled, upcoming stops as rings, the train
+  marker on the current segment, delays in burgundy.
+- **Connection**: Wi-Fi quality dots, data quota bar, bandwidth, devices, bar queue.
+- **Advanced** (collapsed by default, state remembered): the SSID editor and the raw log.
+
 ## Demo trip
 
 **Demo trip** starts the service with canned responses for both portals (`wifi.sncf` flat stops
 with `delay` fields, `wifi.normandie.fr` nested `location` / `arrival` with offset-less dates and a
-`null` progress). It alternates between the two every 10 s, needs no network at all, and drives the
-exact same parsers and notification code as a real trip.
+`null` progress). Stop times are generated relative to now so the "arrival in N min" line and the
+timeline look alive. It alternates between the two every 10 s, needs no network at all, and drives
+the exact same parsers, screen and notification code as a real trip.
 
 ## The log
 
@@ -145,6 +159,9 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
 - **Activation payload.** `{"without21NetConnection":false}` with `Origin`, `Referer` and a desktop
   Chrome `User-Agent` is what works with curl on `wifi.sncf`. Whether `wifi.normandie.fr` accepts
   the same call, and whether the payload is still current, is unknown. The response is logged raw.
+- **Distance unit.** The stat tiles print the sums of `progress.traveledDistance` and
+  `progress.remainingDistance` as kilometres. The portal shows 261 km traveled / 137 km until
+  arrival, which is consistent with km, but the raw field values have not been compared yet.
 - **Redirect and TLS behaviour** of the portals on Android (certificate chain, https to http hops)
   has only been reasoned about, not observed.
 - **Name fields.** Stops prefer `name`, then `label`, then `location.name`. If `name` is a code

@@ -1,8 +1,10 @@
 package fr.onrails.trainwifi
 
+import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** Small, shared text helpers used by both the notification and the activity. */
 object Formatting {
@@ -26,6 +28,15 @@ object Formatting {
         if (gps == null || !gps.fix) return null
         val kmh = gps.speedKmh ?: return null
         return "${kmh.toInt()} km/h"
+    }
+
+    fun km(value: Double): String = "${value.roundToInt()} km"
+
+    /** Whole minutes from now to [t], or null when unknown or already past. */
+    fun minutesUntil(t: ZonedDateTime?): Long? {
+        if (t == null) return null
+        val minutes = Duration.between(ZonedDateTime.now(), t).toMinutes()
+        return if (minutes >= 0) minutes else null
     }
 
     fun mb(value: Double): String = String.format(Locale.ROOT, "%.0f MB", value)

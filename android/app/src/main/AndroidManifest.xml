@@ -16,7 +16,7 @@
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@android:style/Theme.DeviceDefault.DayNight"
+        android:theme="@style/Theme.TrainWifi"
         android:usesCleartextTraffic="true">
         <!-- usesCleartextTraffic: the portal may redirect https -> http on some endpoints. -->
 

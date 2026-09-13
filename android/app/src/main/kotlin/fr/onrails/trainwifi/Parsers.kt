@@ -58,15 +58,22 @@ object Parsers {
 
         var traveled = 0.0
         var remaining = 0.0
+        var withProgress = 0
         for (s in stops) {
             if (s.traveledDistance != null && s.remainingDistance != null) {
                 traveled += s.traveledDistance
                 remaining += s.remainingDistance
+                withProgress++
             }
         }
         val total = traveled + remaining
         val percent = if (total > 0.0) (traveled / total * 100.0).roundToInt().coerceIn(0, 100) else null
-        return Trip(stops, percent)
+        return Trip(
+            stops = stops,
+            progressPercent = percent,
+            traveledDistance = if (withProgress > 0) traveled else null,
+            remainingDistance = if (withProgress > 0) remaining else null,
+        )
     }
 
     /**

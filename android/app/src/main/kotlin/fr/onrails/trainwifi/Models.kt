@@ -64,7 +64,14 @@ data class Stop(
     val isDelayed: Boolean get() = (delayMinutes ?: 0) > 0
 }
 
-data class Trip(val stops: List<Stop>, val progressPercent: Int?) {
+data class Trip(
+    val stops: List<Stop>,
+    val progressPercent: Int?,
+    /** Sum of traveledDistance over stops with progress data. Unit assumed to be km (unverified). */
+    val traveledDistance: Double?,
+    /** Sum of remainingDistance over stops with progress data. Unit assumed to be km (unverified). */
+    val remainingDistance: Double?,
+) {
     val destination: Stop? get() = stops.lastOrNull()
 
     /** First stop that still has distance to cover. */

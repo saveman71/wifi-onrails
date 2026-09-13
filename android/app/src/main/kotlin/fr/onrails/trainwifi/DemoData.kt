@@ -1,12 +1,23 @@
 package fr.onrails.trainwifi
 
 import org.json.JSONObject
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Canned portal responses for both stop shapes so the parsers and the notification can be
  * checked without a train, and without any network at all.
  */
 object DemoData {
+
+    private val withOffset = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssxxx")
+    private val withoutOffset = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+
+    /** ISO date [minutes] from now, in Paris time, with or without the offset suffix. */
+    private fun at(minutes: Long, offset: Boolean): String {
+        val t = ZonedDateTime.now(Parsers.PARIS).withSecond(0).withNano(0).plusMinutes(minutes)
+        return t.format(if (offset) withOffset else withoutOffset)
+    }
 
     class Sample(
         val portal: Portal,
@@ -18,7 +29,7 @@ object DemoData {
     )
 
     /** wifi.sncf shape: flat stops with name/label/delay/isDelayed/theoricDate/realDate, offset dates. */
-    val sncf = Sample(
+    val sncf: Sample get() = Sample(
         portal = Portal.SNCF,
         status = """{"active":true,"status_description":"identifier has existing grant","granted_bandwidth":100000,
             "remaining_data":108700,"consumed_data":915300,"next_reset":1711964975000}""",
@@ -27,23 +38,23 @@ object DemoData {
             "altitude":356.63,"speed":82.7,"heading":120.5}""",
         details = """{"stops":[
             {"name":"Paris Gare de Lyon","label":"PARIS GARE DE LYON","delay":0,"isDelayed":false,
-             "theoricDate":"2024-04-01T09:41:00+02:00","realDate":"2024-04-01T09:41:00+02:00",
+             "theoricDate":"${at(-92, true)}","realDate":"${at(-92, true)}",
              "progress":{"traveledDistance":0,"remainingDistance":0}},
             {"name":"Lyon Part-Dieu","label":"LYON PART DIEU","delay":0,"isDelayed":false,
-             "theoricDate":"2024-04-01T11:41:00+02:00","realDate":"2024-04-01T11:41:00+02:00",
+             "theoricDate":"${at(-12, true)}","realDate":"${at(-12, true)}",
              "progress":{"traveledDistance":465,"remainingDistance":0}},
             {"name":"Valence TGV","label":"VALENCE TGV","delay":5,"isDelayed":true,
-             "theoricDate":"2024-04-01T12:35:00+02:00","realDate":"2024-04-01T12:40:00+02:00",
+             "theoricDate":"${at(7, true)}","realDate":"${at(12, true)}",
              "progress":{"traveledDistance":98,"remainingDistance":6}},
             {"name":"Grenoble","label":"GRENOBLE","delay":5,"isDelayed":true,
-             "theoricDate":"2024-04-01T13:13:00+02:00","realDate":"2024-04-01T13:18:00+02:00",
+             "theoricDate":"${at(45, true)}","realDate":"${at(50, true)}",
              "progress":{"traveledDistance":0,"remainingDistance":50}}
         ]}""",
         bar = """{"isBarQueueEmpty":false}""",
     )
 
     /** wifi.normandie.fr shape: location.name + arrival.date/realDate, offset-less dates, one null progress. */
-    val normandie = Sample(
+    val normandie: Sample get() = Sample(
         portal = Portal.NORMANDIE,
         status = """{"active":true,"status_description":"ok","granted_bandwidth":51200,
             "remaining_data":409600,"consumed_data":102400,"next_reset":1711980000000}""",
@@ -52,25 +63,25 @@ object DemoData {
             "altitude":98.0,"speed":44.4,"heading":270.0}""",
         details = """{"stops":[
             {"location":{"name":"Paris Saint-Lazare"},
-             "arrival":{"date":"2024-04-01T08:10:00","realDate":"2024-04-01T08:10:00"},
+             "arrival":{"date":"${at(-55, false)}","realDate":"${at(-55, false)}"},
              "progress":null},
             {"location":{"name":"Évreux-Normandie"},
-             "arrival":{"date":"2024-04-01T09:05:00","realDate":"2024-04-01T09:05:00"},
+             "arrival":{"date":"${at(-10, false)}","realDate":"${at(-10, false)}"},
              "progress":{"traveledDistance":96,"remainingDistance":0}},
             {"location":{"name":"Bernay"},
-             "arrival":{"date":"2024-04-01T09:32:00","realDate":"2024-04-01T09:35:00"},
+             "arrival":{"date":"${at(17, false)}","realDate":"${at(20, false)}"},
              "progress":{"traveledDistance":30,"remainingDistance":13}},
             {"location":{"name":"Lisieux"},
-             "arrival":{"date":"2024-04-01T09:48:00","realDate":"2024-04-01T09:51:00"},
+             "arrival":{"date":"${at(33, false)}","realDate":"${at(36, false)}"},
              "progress":{"traveledDistance":0,"remainingDistance":24}},
             {"location":{"name":"Caen"},
-             "arrival":{"date":"2024-04-01T10:22:00","realDate":"2024-04-01T10:25:00"},
+             "arrival":{"date":"${at(67, false)}","realDate":"${at(70, false)}"},
              "progress":{"traveledDistance":0,"remainingDistance":50}}
         ]}""",
         bar = """{"isBarQueueEmpty":true}""",
     )
 
-    val samples: List<Sample> = listOf(sncf, normandie)
+    val samples: List<Sample> get() = listOf(sncf, normandie)
 
     /** Run a sample through the same parsers the service uses and build the resulting state. */
     fun toState(sample: Sample): TrainState {

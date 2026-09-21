@@ -53,8 +53,8 @@ dependencies {
     // HTTP is HttpURLConnection and JSON is org.json, both part of the platform.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // The portal serves PMTiles vector tiles and a MapLibre style, so the map has to be MapLibre.
-    // PMTiles are read natively from 11.8.0 on.
-    implementation("org.maplibre.gl:android-sdk:11.11.0")
+    // PMTiles are read natively from 11.8.0 on, and cached from 13.5.0 on.
+    implementation("org.maplibre.gl:android-sdk:13.6.1")
     // MapLibre pulls okhttp in at runtime only. TrainMap needs it at compile time to give MapLibre
     // a client tied to the train's Wi-Fi. Same version as MapLibre's POM.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

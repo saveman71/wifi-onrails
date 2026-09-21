@@ -43,6 +43,10 @@ object Formatting {
         return if (space < 0) text to "" else text.take(space) to text.substring(space + 1)
     }
 
+    /** Minutes in, the portal's "41min" or "1h36" out. */
+    fun duration(minutes: Long): String =
+        if (minutes < 60) "${minutes}min" else "${minutes / 60}h${"%02d".format(minutes % 60)}"
+
     /** Whole minutes from now to [t], or null when unknown or already past. */
     fun minutesUntil(t: ZonedDateTime?): Long? {
         if (t == null) return null

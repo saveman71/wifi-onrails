@@ -263,4 +263,4 @@ Nothing in this app has run on board yet. Please confirm, and fix from the app o
   ongoing, a Stop action.
 - The `/router/api/pepita` socket.io namespace is not used: polling every 15 s is enough and avoids
   a dependency.
-- minSdk 29, target/compile 35, Kotlin 2.0.21, AGP 8.7.3, JVM target 17, Gradle 8.10.2.
+- minSdk 29, target/compile 35, Kotlin 2.2.10, AGP 8.7.3, JVM target 17, Gradle 8.10.2.

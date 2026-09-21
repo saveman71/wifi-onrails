@@ -294,7 +294,11 @@ class MainActivity : Activity() {
         heroEta.visibility = View.VISIBLE
 
         val parts = mutableListOf<String>()
-        Formatting.minutesUntil(destination.eta)?.let { parts += "Arrival in $it min" }
+        // Name the station. The line above shows the next stop and its time, so a bare
+        // "Arrival in 26 min" reads as if it were about that one.
+        Formatting.minutesUntil(destination.eta)?.let {
+            parts += "Arrival in ${destination.name} in ${Formatting.duration(it)}"
+        }
         val delay = destination.delayMinutes
         parts += when {
             delay == null -> ""

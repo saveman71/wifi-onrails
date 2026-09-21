@@ -120,8 +120,10 @@ body of every response so a parser can be fixed from inside a train.
 
 `TrainMap` uses MapLibre on the portal's own map: PMTiles archives at `/maps/europe.pmtiles` and
 `/maps/osm_railways.pmtiles`, style at `/karto/style-{dark,light}.json`, sprites and Avenir glyphs
-under `/maps/`. MapLibre reads `pmtiles://` natively from 11.8.0. Three things are needed and none
-is obvious:
+under `/maps/`. MapLibre reads `pmtiles://` natively from 11.8.0 and caches PMTiles from 13.5.0,
+which is why the dependency is on 13.x: without the cache every cold start refetches the archives
+over the train's Wi-Fi and the map stays blank for about 40 s. 13.x is built with Kotlin 2.2, so
+the Kotlin plugin has to match. Three more things are needed and none is obvious:
 
 - The style calls its own host `http://localhost:8000`. `TrainMap.rewrite` swaps in the portal base
   URL, which fixes the tiles, the sprite and the glyphs in one replace.

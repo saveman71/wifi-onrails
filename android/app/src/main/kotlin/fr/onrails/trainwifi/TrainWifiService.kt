@@ -210,6 +210,7 @@ class TrainWifiService : Service() {
         val client = PortalClient(network)
         var api: PortalApi? = null
         var reportedValid = false
+        var dumped = false
         var failures = 0
         var noPortalDelay = NO_PORTAL_RETRY_MIN_MS
         var noPortalSince = 0L
@@ -260,6 +261,11 @@ class TrainWifiService : Service() {
                     connectivity.reportNetworkConnectivity(network, true)
                     reportedValid = true
                     AppState.log("Reported network connectivity to Android")
+                }
+
+                if (!dumped) {
+                    dumped = true
+                    PortalDump.write(this@TrainWifiService, client, portal.portal)
                 }
 
                 val statistics = fetch("statistics") { portal.statistics() }

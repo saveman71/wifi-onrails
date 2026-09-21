@@ -45,6 +45,10 @@ class PortalClient(
     fun postJson(url: String, body: JSONObject, headers: Map<String, String> = emptyMap()): JSONObject =
         toJson(request(url, "POST", body.toString(), headers))
 
+    /** Body and status, no JSON parsing. Used by [PortalDump]. */
+    fun get(url: String, headers: Map<String, String> = emptyMap()): Response =
+        request(url, "GET", null, headers)
+
     /**
      * The portal puts its errors in the JSON body and repeats them in the HTTP status: before
      * activation /connection/status answers 404 with

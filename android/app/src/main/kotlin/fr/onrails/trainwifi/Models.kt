@@ -72,6 +72,8 @@ data class Stop(
 
 data class Trip(
     val stops: List<Stop>,
+    /** The train number the portal prints beside the brand, "6603" on a Paris to Lyon INOUI. */
+    val number: String?,
     val progressPercent: Int?,
     /** Sum of traveledDistance over stops with progress data, in metres (as observed on wifi.sncf). */
     val traveledMetres: Double?,

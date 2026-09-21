@@ -79,6 +79,7 @@ object Parsers {
         val percent = if (total > 0.0) (traveled / total * 100.0).roundToInt().coerceIn(0, 100) else null
         return Trip(
             stops = stops,
+            number = json.str("number"),
             progressPercent = percent,
             traveledMetres = if (withProgress > 0) traveled else null,
             remainingMetres = if (withProgress > 0) remaining else null,

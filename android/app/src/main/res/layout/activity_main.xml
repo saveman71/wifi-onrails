@@ -30,6 +30,7 @@
                 android:src="@drawable/ic_train_brand" />
 
             <TextView
+                android:id="@+id/app_title"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"

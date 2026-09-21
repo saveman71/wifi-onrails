@@ -36,6 +36,7 @@ class MainActivity : Activity() {
 
     private lateinit var settings: Settings
 
+    private lateinit var appTitle: TextView
     private lateinit var phaseChip: TextView
     private lateinit var heroKicker: TextView
     private lateinit var heroTitle: TextView
@@ -132,6 +133,7 @@ class MainActivity : Activity() {
     }
 
     private fun bindViews() {
+        appTitle = findViewById(R.id.app_title)
         phaseChip = findViewById(R.id.phase_chip)
         heroKicker = findViewById(R.id.hero_kicker)
         heroTitle = findViewById(R.id.hero_title)
@@ -243,6 +245,7 @@ class MainActivity : Activity() {
     // ---- Rendering -------------------------------------------------------------------------
 
     private fun render(state: TrainState) {
+        appTitle.text = titleWithTrainNumber(state.trip?.number)
         phaseChip.text = chipLabel(state.phase)
         renderHero(state)
         mapCard.visibility = if (trainMap.render(state)) View.VISIBLE else View.GONE
@@ -309,6 +312,20 @@ class MainActivity : Activity() {
         } else {
             progressRow.visibility = View.GONE
         }
+    }
+
+    /** The portal writes its brand then the train number in burgundy: "TGV INOUI 6603". */
+    private fun titleWithTrainNumber(number: String?): CharSequence {
+        val name = getString(R.string.app_name)
+        if (number.isNullOrBlank()) return name
+        val out = SpannableStringBuilder(name).append(' ').append(number)
+        out.setSpan(
+            ForegroundColorSpan(getColor(R.color.brand_red)),
+            name.length + 1,
+            out.length,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+        )
+        return out
     }
 
     /** "293 km/h" as the portal sets it: the figure large, "KM/H" small and upright beside it. */

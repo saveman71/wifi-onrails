@@ -1,0 +1,597 @@
+[
+  {
+    "origine_uic": "87271494",
+    "destination_uic": "87223263",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271494",
+    "destination_uic": "87751008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271494",
+    "destination_uic": "87581009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271494",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271494",
+    "destination_uic": "87723197",
+    "co2": "97%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87723197",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87751008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87688887",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87773002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87481002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87319012",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87223263",
+    "destination_uic": "87581009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87286005",
+    "destination_uic": "87773002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87286005",
+    "destination_uic": "87751008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87286005",
+    "destination_uic": "87581009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87286005",
+    "destination_uic": "87741793",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87286005",
+    "destination_uic": "87481002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87723197",
+    "destination_uic": "87751008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87723197",
+    "destination_uic": "87773002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87723197",
+    "destination_uic": "87755009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87723197",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87723197",
+    "destination_uic": "87611004",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87722025",
+    "destination_uic": "87481002",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87722025",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87111849",
+    "destination_uic": "87318964",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87111849",
+    "destination_uic": "87319012",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87111849",
+    "destination_uic": "87223263",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87751008",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87751008",
+    "destination_uic": "87192039",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87751008",
+    "destination_uic": "87413013",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87393702",
+    "destination_uic": "87581009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87192039",
+    "destination_uic": "87212027",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87773002",
+    "destination_uic": "87192039",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87773002",
+    "destination_uic": "87212027",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87773002",
+    "destination_uic": "87471003",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87688887",
+    "destination_uic": "87481002",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87756056",
+    "destination_uic": "87723197",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87212027",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87192039",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87171926",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87175042",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87144014",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87182063",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87141002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87171009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87182014",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87172007",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87191007",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87144451",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87113001",
+    "destination_uic": "87172254",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87746008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87755629",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87725705",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87763029",
+    "co2": "97%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87713040",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87300822",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87718007",
+    "co2": "97%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87747006",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87741009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87751008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87745679",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87757526",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87755009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87723197",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87722025",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87756056",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87773002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87784009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87726000",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87718007",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87688887",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87741793",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87742361",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87753004",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87746479",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87686006",
+    "destination_uic": "87765008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87281006",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87223263",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87343004",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87345025",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87286005",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87317586",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87345009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87317263",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87286542",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87271007",
+    "destination_uic": "87342014",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87481705",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87484006",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87571240",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87673400",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87611004",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87481002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87474007",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87673004",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87396002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87473223",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87485003",
+    "co2": "95%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87575001",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87583005",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87581009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87582668",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87476606",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87474098",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87571000",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87677005",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87671008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87481788",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87473009",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87478107",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87486449",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87486019",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87473181",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87476002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87586008",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87391003",
+    "destination_uic": "87396002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87212027",
+    "destination_uic": "87481002",
+    "co2": "96%"
+  },
+  {
+    "origine_uic": "87212027",
+    "destination_uic": "87471003",
+    "co2": "96%"
+  }
+]

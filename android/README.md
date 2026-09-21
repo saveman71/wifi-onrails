@@ -30,6 +30,12 @@ that turns out to be a train:
    spot would loop, because a registration made while a Wi-Fi is already there sends the intent
    within milliseconds; the 15-minute job is the compromise. When it runs with no Wi-Fi around, the
    registration stays until the next network shows up, which is the case that matters.
+6. **Wait on the network, not on the clock.** `WifiJobService`, persisted, scheduled with
+   `setRequiredNetwork(NetworkRequest)` asking only for `TRANSPORT_WIFI`. `setRequiredNetworkType`
+   is no use here: `JobInfo.Builder` adds `NET_CAPABILITY_VALIDATED` to every type it knows and a
+   captive portal has none until the app has activated it. While the phone is off Wi-Fi this waits
+   for free and runs the moment a network shows up. On a Wi-Fi that is not a train it puts itself
+   5 min out.
 
 **Battery optimisation exemption.** Android 12+ refuses foreground-service starts from a background
 receiver unless the app is exempt from battery optimisation; the exemption also keeps network
@@ -42,9 +48,10 @@ job and probes the current Wi-Fi right away. *Disable* (also the notification's 
 all of that off; a plain stop would be undone by the watcher within seconds on a train.
 
 Why not the obvious alternatives: manifest receivers for Wi-Fi state changes are blocked since
-Android 7/8; JobScheduler's network constraint only fires on *validated* networks, which a captive
-portal never is until activated; the network-suggestion post-connection broadcast requires location
-permission and, from the background, "Allow all the time".
+Android 7/8; `JobInfo.setRequiredNetworkType` only fires on *validated* networks, which a captive
+portal never is until activated, so step 6 uses `setRequiredNetwork` with a bare `NetworkRequest`
+instead; the network-suggestion post-connection broadcast requires location permission and, from
+the background, "Allow all the time".
 
 ## How it works
 
@@ -71,7 +78,7 @@ Files, all under `app/src/main/kotlin/fr/onrails/trainwifi/`:
 | File | Role |
 | --- | --- |
 | `AutoConnect.kt` | Arms/disarms the Wi-Fi watch, schedules the safety-net job, probe-then-start logic, battery exemption |
-| `WifiWatchReceiver.kt`, `BootReceiver.kt`, `WatchJobService.kt` | Entry points: Wi-Fi available, reboot / update, periodic check |
+| `WifiWatchReceiver.kt`, `BootReceiver.kt`, `WatchJobService.kt`, `WifiJobService.kt` | Entry points: Wi-Fi available, reboot / update, periodic check, network-constrained check |
 | `PortalDetector.kt` | Probes both portals on a network; shared by the receiver, the job and the service |
 | `TrainWifiService.kt` | Foreground service (`specialUse`), network callback, poll loop, self-stop to standby, demo loop |
 | `PortalClient.kt` | `HttpURLConnection` bound to the Wi-Fi `Network`, manual redirects (3 hops) |
@@ -84,6 +91,7 @@ Files, all under `app/src/main/kotlin/fr/onrails/trainwifi/`:
 | `TrainMap.kt` | MapLibre map on the portal's own PMTiles and style, train marker from the portal GPS, route from `/train/graph`, follow mode |
 | `WifiSuggestions.kt`, `Settings.kt` | Suggestions API wrapper, persisted SSID list |
 | `DemoData.kt` | Canned JSON for both portals, used by "Demo trip" |
+| `PortalDump.kt` | Writes the raw body of the endpoints the app does not parse yet, for reading off the phone after a trip |
 
 ## Build
 

@@ -76,7 +76,13 @@ the code:
    one registration covers a single Wi-Fi network and joining any non-train Wi-Fi uses it up.
    `AutoConnect.rearm` has the trace. Registering again on the spot loops, so the job is where it
    happens.
-5. `BootReceiver` re-arms after a reboot or an app update.
+5. `WifiJobService` waits on a Wi-Fi network instead of on the clock, scheduled with
+   `setRequiredNetwork(NetworkRequest)`. `setRequiredNetworkType` cannot be used: `JobInfo.Builder`
+   adds `NET_CAPABILITY_VALIDATED` to every type it knows, and a captive portal has none until the
+   app has activated it. `dumpsys jobscheduler` shows the stored request asking only for
+   `TRANSPORT_WIFI`. Off Wi-Fi this waits for free; on a Wi-Fi that is not a train it re-schedules
+   itself 5 min out.
+6. `BootReceiver` re-arms after a reboot or an app update.
 
 `AutoConnect.onWifiAvailable` returns early and **silently** when auto-connect is off or when
 `AppState.state.value.phase.isRunning()`. If the log shows nothing at all after forcing the job,

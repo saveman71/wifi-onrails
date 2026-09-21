@@ -17,6 +17,16 @@ android {
         versionName = "0.7-poc"
     }
 
+    // Committed so CI builds keep one signature and stay installable over each other.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

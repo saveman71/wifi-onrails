@@ -5,7 +5,7 @@ trains on its own, clears the captive portal without the user touching anything,
 trip (destination, ETA, delay, progress, speed) in a permanent notification.
 
 It is a proof of concept: plain Kotlin, platform APIs, two third-party dependencies
-(`kotlinx-coroutines` for `StateFlow`, `osmdroid` for the map). No location permission: the map
+(`kotlinx-coroutines` for `StateFlow`, `maplibre` for the map). No location permission: the map
 shows the train's own GPS from the portal, not the phone's.
 
 ## Always on, without running all the time
@@ -81,7 +81,7 @@ Files, all under `app/src/main/kotlin/fr/onrails/trainwifi/`:
 | `TripNotification.kt` | Ongoing silent notification with progress bar and `BigTextStyle` |
 | `MainActivity.kt` | Hero card (destination, ETA, progress), stat tiles, connection card, buttons, Advanced section |
 | `TimelineView.kt` | Canvas-drawn route timeline: passed/upcoming stops, train marker, delays |
-| `TrainMap.kt` | osmdroid map: CARTO basemap, train marker from the portal GPS, route through the stops, follow mode |
+| `TrainMap.kt` | MapLibre map on the portal's own PMTiles and style, train marker from the portal GPS, route from `/train/graph`, follow mode |
 | `WifiSuggestions.kt`, `Settings.kt` | Suggestions API wrapper, persisted SSID list |
 | `DemoData.kt` | Canned JSON for both portals, used by "Demo trip" |
 
@@ -169,12 +169,19 @@ The screen follows the portal's look: INOUI burgundy accents, navy labels, soft 
 cards, light and dark palettes (`values/colors.xml`, `values-night/colors.xml`), no UI library.
 
 - **Hero card**: destination, ETA pill, "Arrival in N min, on time / +N min", progress bar.
-- **Live map** (shown as soon as the portal GPS has a fix): osmdroid with CARTO's free Dark Matter /
-  Positron raster basemap following the system theme, a burgundy train marker, and the route as a
-  polyline through the stops when their coordinates are present in `/train/details`. The map follows
-  the train until you pan; a Recenter chip brings it back. Zoom is capped at 14 to keep tile
-  downloads small on the train's quota; tiles are cached on disk. Attribution
-  "© OpenStreetMap contributors © CARTO" is drawn on the map, as both licences require.
+- **Live map** (shown as soon as the portal GPS has a fix): the portal's own map, nothing from the
+  internet. MapLibre reads the PMTiles archives the portal serves at `/maps/europe.pmtiles` and
+  `/maps/osm_railways.pmtiles` through its style at `/karto/style-dark.json` or
+  `/karto/style-light.json`, following the system theme. That style is the one the portal itself
+  uses: LGV lines, TGV stations, platforms. On top of it the app adds the route from
+  `/router/api/train/graph`, the stations, and a burgundy train marker from the portal GPS. The map
+  follows the train until you pan; a Recenter chip brings it back.
+
+  Two details make this work on board. The style names its own host `http://localhost:8000`, which
+  `TrainMap.rewrite` swaps for the portal base URL. And MapLibre opens its own sockets, so
+  `HttpRequestUtil.setOkHttpClient` gives it a client with the Wi-Fi `Network`'s socket factory
+  *and* DNS, while `MapLibre.setConnected(true)` stops it reading the default network to decide it
+  is offline.
 - **Stat tiles**: train speed, km traveled, km until arrival (sums of the stops' `progress`, metres in the API).
 - **Route**: a timeline drawn on canvas, passed stops filled, upcoming stops as rings, the train
   marker on the current segment, delays in burgundy.

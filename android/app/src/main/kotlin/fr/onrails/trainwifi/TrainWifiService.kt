@@ -149,6 +149,7 @@ class TrainWifiService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        BoundNetwork.current = null
         connectivity.unregisterNetworkCallback(wifiCallback)
         val armed = settings.autoConnectEnabled()
         AppState.update { TrainState(phase = if (armed) Phase.STANDBY else Phase.STOPPED) }
@@ -208,6 +209,7 @@ class TrainWifiService : Service() {
      */
     private suspend fun pollLoop(network: Network) {
         val client = PortalClient(network)
+        BoundNetwork.current = network
         var api: PortalApi? = null
         var reportedValid = false
         var dumped = false
@@ -245,6 +247,7 @@ class TrainWifiService : Service() {
                 }
                 noPortalSince = 0L
                 val portal: PortalApi = api
+                BoundNetwork.portal = portal.portal
 
                 var status = portal.connectionStatus()
                 AppState.log("Status: active=${status.active} (${status.description})")

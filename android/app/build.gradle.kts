@@ -13,8 +13,11 @@ android {
         applicationId = "fr.onrails.trainwifi"
         minSdk = 29
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7-poc"
+        versionCode = 8
+        versionName = "0.8-poc"
+        // MapLibre has about 11 MB of native code per ABI. arm64 covers every phone this POC runs
+        // on and keeps the CI artifact small.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     // Committed so CI builds keep one signature and stay installable over each other.
@@ -49,6 +52,10 @@ dependencies {
     // StateFlow and the service poll loop.
     // HTTP is HttpURLConnection and JSON is org.json, both part of the platform.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    // Map view for the live train position (OpenStreetMap-based, pure Java, ~1 MB).
-    implementation("org.osmdroid:osmdroid-android:6.1.20")
+    // The portal serves PMTiles vector tiles and a MapLibre style, so the map has to be MapLibre.
+    // PMTiles are read natively from 11.8.0 on.
+    implementation("org.maplibre.gl:android-sdk:11.11.0")
+    // MapLibre pulls okhttp in at runtime only. TrainMap needs it at compile time to give MapLibre
+    // a client tied to the train's Wi-Fi. Same version as MapLibre's POM.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

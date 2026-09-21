@@ -1,68 +1,89 @@
 package fr.onrails.trainwifi
 
 import android.content.Context
-import android.graphics.Paint
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.os.Handler
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.XYTileSource
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.CustomZoomButtonsController
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.CopyrightOverlay
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.infowindow.InfoWindow
-import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
-import java.io.File
+import okhttp3.Dns
+import okhttp3.OkHttpClient
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.module.http.HttpRequestUtil
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.Point
+import kotlin.concurrent.thread
 
 /**
- * Live map of the train: osmdroid with CARTO's free raster basemap (dark or light following the
- * system theme), the train position from /router/api/train/gps, and the route through the stops
- * when the portal gives their coordinates. Follows the train until the user pans; a Recenter chip
- * brings it back.
+ * Live map of the train on the portal's own map: MapLibre reads the PMTiles archives at
+ * /maps/europe.pmtiles and /maps/osm_railways.pmtiles through the style at /karto/style-dark.json.
+ * That style is the one the portal uses itself, down to the LGV lines and the TGV station markers.
+ *
+ * Two things make it work on a train:
+ *
+ * - The style calls its own host `http://localhost:8000`, which is the portal talking to itself.
+ *   [rewrite] puts the portal base URL there instead.
+ * - MapLibre opens its own sockets, and they have to go to the Wi-Fi the portal is on rather than
+ *   the default route. [bindHttp] hands it an OkHttp client tied to that network.
+ *   `MapLibre.setConnected(true)` goes with it: MapLibre reads the default network to tell whether
+ *   it is online, and that is mobile data until the portal is activated.
  */
 class TrainMap(private val context: Context, private val mapView: MapView, private val recenterButton: View) {
 
     companion object {
-        const val DEFAULT_ZOOM = 9.0
-        const val MIN_ZOOM = 5.0
-        const val MAX_ZOOM = 14.0 // keeps tile downloads modest on the train's data quota
-        private const val ATTRIBUTION = "© OpenStreetMap contributors © CARTO"
+        const val DEFAULT_ZOOM = 8.0
+        const val MIN_ZOOM = 4.0
+        const val MAX_ZOOM = 14.0
+        private const val STYLE_HOST = "http://localhost:8000"
+        private const val ROUTE_SOURCE = "trainwifi-route"
+        private const val STOPS_SOURCE = "trainwifi-stops"
+        private const val TRAIN_SOURCE = "trainwifi-train"
+        private const val STOP_ICON = "trainwifi-stop-icon"
+        private const val TRAIN_ICON = "trainwifi-train-icon"
 
         /** Must run before the first MapView is inflated. */
         fun configure(context: Context) {
-            val config = Configuration.getInstance()
-            config.load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-            config.userAgentValue = context.packageName
-            config.osmdroidBasePath = File(context.cacheDir, "osmdroid")
-            config.osmdroidTileCache = File(config.osmdroidBasePath, "tiles")
+            MapLibre.getInstance(context)
         }
+
+        private fun rewrite(styleJson: String, portal: Portal): String =
+            styleJson.replace(STYLE_HOST, portal.baseUrl)
     }
 
+    private val main = Handler(Looper.getMainLooper())
     private var follow = true
     private var centeredOnce = false
-    private var trainMarker: Marker? = null
-    private var routeLine: Polyline? = null
-    private val stopMarkers = mutableListOf<Marker>()
+    private var map: MapLibreMap? = null
+    private var style: Style? = null
+    private var styleLoading = false
+    private var styleKey: String? = null
     private var routeKey: String? = null
+    private var boundNetworkId: String? = null
+    private var trainPosition: LatLng? = null
 
     init {
-        val night = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val style = if (night) "dark_all" else "light_all"
-        val source = XYTileSource(
-            "carto-$style", 3, 18, 512, "@2x.png",
-            arrayOf("a", "b", "c", "d").map { "https://$it.basemaps.cartocdn.com/$style/" }.toTypedArray(),
-            ATTRIBUTION,
-        )
-        mapView.setTileSource(source)
-        mapView.setMultiTouchControls(true)
-        mapView.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-        mapView.setMinZoomLevel(MIN_ZOOM)
-        mapView.setMaxZoomLevel(MAX_ZOOM)
-        mapView.controller.setZoom(DEFAULT_ZOOM)
-        mapView.overlays.add(CopyrightOverlay(context))
+        mapView.onCreate(null)
+        mapView.getMapAsync { ready ->
+            map = ready
+            ready.uiSettings.isLogoEnabled = false
+            ready.uiSettings.isRotateGesturesEnabled = false
+            ready.uiSettings.isTiltGesturesEnabled = false
+            ready.setMinZoomPreference(MIN_ZOOM)
+            ready.setMaxZoomPreference(MAX_ZOOM)
+        }
 
         // Inside a ScrollView: keep the drag for the map, and stop following once the user pans.
         mapView.setOnTouchListener { view, event ->
@@ -79,7 +100,7 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
         recenterButton.setOnClickListener {
             follow = true
             it.visibility = View.GONE
-            trainMarker?.position?.let { p -> mapView.controller.animateTo(p) }
+            trainPosition?.let { position -> centerOn(position) }
         }
     }
 
@@ -90,68 +111,137 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
         val longitude = gps?.longitude
         if (gps == null || !gps.fix || latitude == null || longitude == null) return false
 
-        val position = GeoPoint(latitude, longitude)
-        renderRoute(state.path, state.trip)
+        bindHttp()
+        loadStyle()
+        trainPosition = LatLng(latitude, longitude)
 
-        val marker = trainMarker ?: Marker(mapView).also {
-            it.icon = context.getDrawable(R.drawable.ic_map_train)
-            it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-            it.setInfoWindow(null as MarkerInfoWindow?)
-            trainMarker = it
-        }
-        marker.position = position
-        // Keep the train above the route and the stops.
-        mapView.overlays.remove(marker)
-        mapView.overlays.add(marker)
-
-        if (follow) {
-            if (centeredOnce) mapView.controller.animateTo(position) else mapView.controller.setCenter(position)
-            centeredOnce = true
-        }
-        mapView.invalidate()
+        val loaded = style ?: return true
+        renderRoute(loaded, state.path, state.trip)
+        loaded.getSourceAs<GeoJsonSource>(TRAIN_SOURCE)?.setGeoJson(Point.fromLngLat(longitude, latitude))
+        if (follow) centerOn(LatLng(latitude, longitude))
         return true
     }
 
-    private fun renderRoute(path: List<LatLon>, trip: Trip?) {
-        val stops = trip?.stops.orEmpty()
-            .filter { it.hasCoordinates }
-            .map { GeoPoint(it.latitude!!, it.longitude!!) }
-        // The rails when the portal gives them, else the stations joined by straight lines.
-        val route = if (path.size >= 2) path.map { GeoPoint(it.latitude, it.longitude) } else stops
-        val key = "${route.size}|" + stops.joinToString(";") { "${it.latitude},${it.longitude}" }
-        if (key == routeKey) return
-        routeKey = key
+    private fun bindHttp() {
+        val network = BoundNetwork.current ?: return
+        val id = network.toString()
+        if (id == boundNetworkId) return
+        boundNetworkId = id
+        HttpRequestUtil.setOkHttpClient(
+            OkHttpClient.Builder()
+                .socketFactory(network.socketFactory)
+                // The socket factory alone leaves name resolution on the default network, where
+                // wifi.sncf does not resolve.
+                .dns(object : Dns {
+                    override fun lookup(hostname: String) = network.getAllByName(hostname).toList()
+                })
+                .build(),
+        )
+        MapLibre.setConnected(true)
+        AppState.log("Map traffic sent over $network")
+    }
 
-        routeLine?.let { mapView.overlays.remove(it) }
-        stopMarkers.forEach { mapView.overlays.remove(it) }
-        stopMarkers.clear()
-        routeLine = null
-        if (route.size < 2) return
+    private fun loadStyle() {
+        val portal = BoundNetwork.portal ?: return
+        val network = BoundNetwork.current ?: return
+        val night = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val path = if (night) "/karto/style-dark.json" else "/karto/style-light.json"
+        val key = portal.baseUrl + path
+        if (key == styleKey || styleLoading) return
+        styleLoading = true
 
-        val line = Polyline(mapView).apply {
-            setPoints(route)
-            outlinePaint.color = context.getColor(R.color.brand_red)
-            outlinePaint.strokeWidth = 8f
-            outlinePaint.strokeCap = Paint.Cap.ROUND
-            outlinePaint.strokeJoin = Paint.Join.ROUND
-            setInfoWindow(null as InfoWindow?)
-        }
-        mapView.overlays.add(line)
-        routeLine = line
-
-        for (point in stops) {
-            val stopMarker = Marker(mapView).apply {
-                icon = context.getDrawable(R.drawable.ic_map_stop)
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                setInfoWindow(null as MarkerInfoWindow?)
-                position = point
+        thread(name = "map-style") {
+            val json = try {
+                rewrite(PortalClient(network).get(portal.url(path)).body, portal)
+            } catch (e: Exception) {
+                AppState.log("No portal map style (${e.javaClass.simpleName}): ${e.message}")
+                styleLoading = false
+                return@thread
             }
-            mapView.overlays.add(stopMarker)
-            stopMarkers += stopMarker
+            main.post {
+                styleLoading = false
+                styleKey = key
+                map?.setStyle(Style.Builder().fromJson(json)) { ready ->
+                    style = ready
+                    routeKey = null
+                    addLayers(ready)
+                    AppState.log("Portal map style in use: $path")
+                }
+            }
         }
     }
 
+    private fun addLayers(style: Style) {
+        style.addImage(STOP_ICON, bitmap(R.drawable.ic_map_stop))
+        style.addImage(TRAIN_ICON, bitmap(R.drawable.ic_map_train))
+        style.addSource(GeoJsonSource(ROUTE_SOURCE))
+        style.addSource(GeoJsonSource(STOPS_SOURCE))
+        style.addSource(GeoJsonSource(TRAIN_SOURCE))
+        style.addLayer(
+            LineLayer("trainwifi-route-line", ROUTE_SOURCE).withProperties(
+                PropertyFactory.lineColor(context.getColor(R.color.brand_red)),
+                PropertyFactory.lineWidth(3.5f),
+                PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+            ),
+        )
+        style.addLayer(
+            SymbolLayer("trainwifi-stops-symbols", STOPS_SOURCE).withProperties(
+                PropertyFactory.iconImage(STOP_ICON),
+                PropertyFactory.iconAllowOverlap(true),
+            ),
+        )
+        style.addLayer(
+            SymbolLayer("trainwifi-train-symbol", TRAIN_SOURCE).withProperties(
+                PropertyFactory.iconImage(TRAIN_ICON),
+                PropertyFactory.iconAllowOverlap(true),
+            ),
+        )
+    }
+
+    private fun renderRoute(style: Style, path: List<LatLon>, trip: Trip?) {
+        val stops = trip?.stops.orEmpty().filter { it.hasCoordinates }
+        // The rails when the portal gives them, else the stations joined by straight lines.
+        val line = if (path.size >= 2) path else stops.map { LatLon(it.latitude!!, it.longitude!!) }
+        val key = "${line.size}|" + stops.joinToString(";") { "${it.latitude},${it.longitude}" }
+        if (key == routeKey) return
+        routeKey = key
+
+        style.getSourceAs<GeoJsonSource>(ROUTE_SOURCE)?.setGeoJson(
+            LineString.fromLngLats(line.map { Point.fromLngLat(it.longitude, it.latitude) }),
+        )
+        style.getSourceAs<GeoJsonSource>(STOPS_SOURCE)?.setGeoJson(
+            FeatureCollection.fromFeatures(
+                stops.map { Feature.fromGeometry(Point.fromLngLat(it.longitude!!, it.latitude!!)) },
+            ),
+        )
+    }
+
+    private fun centerOn(position: LatLng) {
+        val camera = if (centeredOnce) {
+            CameraUpdateFactory.newLatLng(position)
+        } else {
+            CameraUpdateFactory.newLatLngZoom(position, DEFAULT_ZOOM)
+        }
+        if (centeredOnce) map?.easeCamera(camera, 800) else map?.moveCamera(camera)
+        centeredOnce = true
+    }
+
+    private fun bitmap(drawableId: Int): Bitmap {
+        val drawable = requireNotNull(context.getDrawable(drawableId))
+        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 48
+        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 48
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        drawable.setBounds(0, 0, width, height)
+        drawable.draw(Canvas(result))
+        return result
+    }
+
+    fun onStart() = mapView.onStart()
     fun onResume() = mapView.onResume()
     fun onPause() = mapView.onPause()
-    fun onDestroy() = mapView.onDetach()
+    fun onStop() = mapView.onStop()
+    fun onDestroy() = mapView.onDestroy()
+    fun onLowMemory() = mapView.onLowMemory()
 }

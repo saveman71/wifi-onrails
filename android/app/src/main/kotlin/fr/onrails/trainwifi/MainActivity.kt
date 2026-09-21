@@ -160,6 +160,7 @@ class MainActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        trainMap.onStart()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         uiScope = scope
         scope.launch { AppState.state.collect { render(it) } }
@@ -190,7 +191,13 @@ class MainActivity : Activity() {
     override fun onStop() {
         uiScope?.cancel()
         uiScope = null
+        trainMap.onStop()
         super.onStop()
+    }
+
+    override fun onLowMemory() {
+        trainMap.onLowMemory()
+        super.onLowMemory()
     }
 
     override fun onDestroy() {

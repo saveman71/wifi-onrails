@@ -10,7 +10,7 @@ Two clients for the same reverse-engineered on-board Wi-Fi API of French trains:
   app disagrees with it about an endpoint, payload or header, the shell script is right: it is the
   one that has been run on board.
 - `android/`: Kotlin POC (`fr.onrails.trainwifi`), no UI library, two dependencies
-  (`kotlinx-coroutines` for `StateFlow`, `osmdroid` for the map). `android/README.md` is the long
+  (`kotlinx-coroutines` for `StateFlow`, `maplibre` for the map). `android/README.md` is the long
   form of everything below and lists what is still unverified on a real train.
 
 Both talk to `https://wifi.sncf` and `https://wifi.normandie.fr`, same API shape:
@@ -20,15 +20,18 @@ Both talk to `https://wifi.sncf` and `https://wifi.normandie.fr`, same API shape
 ## Commands
 
 ```bash
-# Build the APK. Needs Android SDK platform 35 and JDK 17 or 21 (JDK 24 will not work).
-cd android && ./gradlew assembleDebug     # -> app/build/outputs/apk/debug/app-debug.apk
-
-adb install -r app-debug.apk
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk   # the default JDK 24 is rejected by AGP 8.7.3
+cd android && ./gradlew assembleDebug           # -> app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-There is no Android SDK in this environment. The intended build path is
-`.github/workflows/android.yml`: any push to `android-poc` or `claude/android-poc-**` builds the
-debug APK and uploads it as the `trainwifi-debug-apk` artifact.
+The SDK lives in `~/Android/Sdk` and `android/local.properties` points at it. Gradle writes to
+`~/.gradle` and the first build downloads from `dl.google.com` and `repo.maven.apache.org`, so a
+build needs `dangerouslyDisableSandbox: true`.
+
+`.github/workflows/android.yml` builds the same APK on every push to `android-poc` or
+`claude/android-poc-**` and uploads it as the `trainwifi-debug-apk` artifact. Debug builds are
+signed with `android/app/debug.keystore`, committed so that CI APKs install over each other.
 
 There is no test suite. `AppState.kt`, `Models.kt`, `Parsers.kt`, `Formatting.kt` and `DemoData.kt`
 deliberately import nothing from `android.*`, so they compile and run under a plain JVM with
@@ -106,6 +109,24 @@ carrying `status_code` whatever the HTTP code, and fails only on a body that is 
 `Parsers` are tolerant on purpose: the two portals disagree on field names and firmware versions
 add and remove fields. Every accessor is optional, and `AppState.logRaw` dumps the truncated raw
 body of every response so a parser can be fixed from inside a train.
+
+### The map
+
+`TrainMap` uses MapLibre on the portal's own map: PMTiles archives at `/maps/europe.pmtiles` and
+`/maps/osm_railways.pmtiles`, style at `/karto/style-{dark,light}.json`, sprites and Avenir glyphs
+under `/maps/`. MapLibre reads `pmtiles://` natively from 11.8.0. Three things are needed and none
+is obvious:
+
+- The style calls its own host `http://localhost:8000`. `TrainMap.rewrite` swaps in the portal base
+  URL, which fixes the tiles, the sprite and the glyphs in one replace.
+- MapLibre opens its own sockets, so `HttpRequestUtil.setOkHttpClient` hands it a client with the
+  Wi-Fi `Network`'s socket factory **and** its DNS. The socket factory alone leaves name resolution
+  on the default network, where `wifi.sncf` does not resolve.
+- `MapLibre.setConnected(true)`, because MapLibre reads the default network to decide whether it is
+  online and that is mobile data until the portal is activated.
+
+`BoundNetwork` carries the `Network` and the `Portal` from the service to the activity.
+`abiFilters` is arm64-only: MapLibre is about 11 MB of native code per ABI.
 
 ### State
 

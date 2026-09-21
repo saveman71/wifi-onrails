@@ -7,3 +7,7 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Claude Code session files, created wherever a session is started.
+.claude/
+.mcp.json

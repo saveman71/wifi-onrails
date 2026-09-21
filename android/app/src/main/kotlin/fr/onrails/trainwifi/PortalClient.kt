@@ -1,6 +1,7 @@
 package fr.onrails.trainwifi
 
 import android.net.Network
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -44,9 +45,23 @@ class PortalClient(
     fun postJson(url: String, body: JSONObject, headers: Map<String, String> = emptyMap()): JSONObject =
         toJson(request(url, "POST", body.toString(), headers))
 
+    /**
+     * The portal puts its errors in the JSON body and repeats them in the HTTP status: before
+     * activation /connection/status answers 404 with
+     * `{"status_code":404,"status_description":"identifier <mac> does not have any (in)active grants"}`.
+     * A JSON body with a `status_code` field is a real answer whatever the HTTP code; only a body
+     * that is not JSON (HTML captive page, proxy error) is a failure.
+     */
     private fun toJson(response: Response): JSONObject {
-        if (response.code >= 400) throw HttpException(response.code, response.url, response.body)
-        return JSONObject(response.body) // throws JSONException on HTML captive pages etc.
+        val json = try {
+            JSONObject(response.body)
+        } catch (e: JSONException) {
+            throw HttpException(response.code, response.url, response.body)
+        }
+        if (response.code >= 400 && !json.has("status_code")) {
+            throw HttpException(response.code, response.url, response.body)
+        }
+        return json
     }
 
     private fun request(url: String, method: String, body: String?, headers: Map<String, String>, hop: Int = 0): Response {

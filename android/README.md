@@ -23,9 +23,13 @@ that turns out to be a train:
    tunnel), or after 10 min on a Wi-Fi with no portal, and re-arms the watch on the way out.
 4. **Reboot.** `BootReceiver` (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`) re-arms the watch when
    auto-connect is enabled. Wi-Fi suggestions themselves survive reboots.
-5. **Safety net.** A persisted `JobScheduler` job (`WatchJobService`, every 15 min) repeats the
-   probe if a Wi-Fi is present and the service is not running, for the case where the portal was
-   down at the moment the Wi-Fi connected.
+5. **Re-arm.** A persisted `JobScheduler` job (`WatchJobService`, every 15 min) registers the Wi-Fi
+   watch again and repeats the probe. The re-registration is not optional: ConnectivityService
+   drops a PendingIntent registration about 5 s after it sends the intent, so one registration
+   covers a single Wi-Fi network. Joining any non-train Wi-Fi uses it up. Registering again on the
+   spot would loop, because a registration made while a Wi-Fi is already there sends the intent
+   within milliseconds; the 15-minute job is the compromise. When it runs with no Wi-Fi around, the
+   registration stays until the next network shows up, which is the case that matters.
 
 **Battery optimisation exemption.** Android 12+ refuses foreground-service starts from a background
 receiver unless the app is exempt from battery optimisation; the exemption also keeps network

@@ -20,11 +20,12 @@ import java.util.concurrent.TimeUnit
  *
  * 1. A [ConnectivityManager.registerNetworkCallback] with a PendingIntent. The system fires
  *    [WifiWatchReceiver] whenever a Wi-Fi network appears, even if the app process is dead.
+ *    That registration is one-shot: see [rearm].
  * 2. The receiver probes the portal over that network and starts [TrainWifiService] only if a
  *    train answers. At home the probe fails fast and nothing else happens.
  * 3. The service stops itself when the Wi-Fi is gone or turns out not to be a train, then re-arms.
- * 4. [BootReceiver] re-arms after a reboot, and a persisted 15-minute [WatchJobService] is a safety
- *    net for a missed event (for instance the portal being down when the Wi-Fi connected).
+ * 4. [BootReceiver] re-arms after a reboot, and a persisted 15-minute [WatchJobService] re-arms the
+ *    watch and repeats the probe.
  *
  * Android 12+ lets a background receiver start a foreground service only if the app is exempt
  * from battery optimisations (the exemption also keeps network access during Doze). Without it,
@@ -61,6 +62,27 @@ object AutoConnect {
         } catch (e: Exception) {
             AppState.log("Wi-Fi watch NOT armed (${e.javaClass.simpleName}): ${e.message}")
         }
+    }
+
+    /**
+     * ConnectivityService drops a PendingIntent registration about 5 s after it sends the intent, so
+     * one registration covers exactly one Wi-Fi network. Joining any non-train Wi-Fi uses it up, and
+     * from then on only [WatchJobService] is left. Observed on a Pixel, Android 16:
+     *
+     * ```
+     * 07:40:15.985 REGISTER  id=62183 LISTEN WIFI
+     * 07:40:16.015 (WifiWatchReceiver runs)
+     * 07:40:21.249 RELEASE   id=62183
+     * ```
+     *
+     * Registering again straight away would loop, because a registration made while a Wi-Fi is
+     * already there sends the intent within milliseconds. The job does it instead, every 15 min.
+     * When the job runs with no Wi-Fi around, the registration stays until the next network shows
+     * up, which is the case that matters: getting on a train.
+     */
+    fun rearm(context: Context) {
+        disarm(context)
+        arm(context)
     }
 
     fun disarm(context: Context) {

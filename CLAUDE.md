@@ -68,7 +68,11 @@ the code:
    why a JobScheduler network constraint cannot be used here.
 3. The receiver probes both portals over that network and starts `TrainWifiService` only if one
    answers. Off a train this is one fast failure.
-4. `WatchJobService`, persisted, every 15 min, repeats the probe as a safety net.
+4. `WatchJobService`, persisted, every 15 min, registers the watch again and repeats the probe.
+   ConnectivityService drops a PendingIntent registration about 5 s after it sends the intent, so
+   one registration covers a single Wi-Fi network and joining any non-train Wi-Fi uses it up.
+   `AutoConnect.rearm` has the trace. Registering again on the spot loops, so the job is where it
+   happens.
 5. `BootReceiver` re-arms after a reboot or an app update.
 
 `AutoConnect.onWifiAvailable` returns early and **silently** when auto-connect is off or when

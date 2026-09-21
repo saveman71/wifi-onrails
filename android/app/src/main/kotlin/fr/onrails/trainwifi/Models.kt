@@ -119,6 +119,8 @@ data class Trip(
 }
 
 /** Everything the UI and the notification need. Written by the service, read by everyone else. */
+data class LatLon(val latitude: Double, val longitude: Double)
+
 data class TrainState(
     val phase: Phase = Phase.STOPPED,
     val portal: Portal? = null,
@@ -127,6 +129,8 @@ data class TrainState(
     val statistics: Statistics? = null,
     val gps: Gps? = null,
     val trip: Trip? = null,
+    /** GET /router/api/train/graph: the rails the train runs on, 1793 points on Paris to Lyon. */
+    val path: List<LatLon> = emptyList(),
     val barQueueEmpty: Boolean? = null,
     val updatedAtMillis: Long = 0L,
 )

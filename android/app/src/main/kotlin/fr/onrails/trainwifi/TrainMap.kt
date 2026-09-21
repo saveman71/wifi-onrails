@@ -91,7 +91,7 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
         if (gps == null || !gps.fix || latitude == null || longitude == null) return false
 
         val position = GeoPoint(latitude, longitude)
-        renderRoute(state.trip)
+        renderRoute(state.path, state.trip)
 
         val marker = trainMarker ?: Marker(mapView).also {
             it.icon = context.getDrawable(R.drawable.ic_map_train)
@@ -112,11 +112,13 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
         return true
     }
 
-    private fun renderRoute(trip: Trip?) {
-        val points = trip?.stops.orEmpty()
+    private fun renderRoute(path: List<LatLon>, trip: Trip?) {
+        val stops = trip?.stops.orEmpty()
             .filter { it.hasCoordinates }
             .map { GeoPoint(it.latitude!!, it.longitude!!) }
-        val key = points.joinToString(";") { "${it.latitude},${it.longitude}" }
+        // The rails when the portal gives them, else the stations joined by straight lines.
+        val route = if (path.size >= 2) path.map { GeoPoint(it.latitude, it.longitude) } else stops
+        val key = "${route.size}|" + stops.joinToString(";") { "${it.latitude},${it.longitude}" }
         if (key == routeKey) return
         routeKey = key
 
@@ -124,10 +126,10 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
         stopMarkers.forEach { mapView.overlays.remove(it) }
         stopMarkers.clear()
         routeLine = null
-        if (points.size < 2) return
+        if (route.size < 2) return
 
         val line = Polyline(mapView).apply {
-            setPoints(points)
+            setPoints(route)
             outlinePaint.color = context.getColor(R.color.brand_red)
             outlinePaint.strokeWidth = 8f
             outlinePaint.strokeCap = Paint.Cap.ROUND
@@ -137,7 +139,7 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
         mapView.overlays.add(line)
         routeLine = line
 
-        for (point in points) {
+        for (point in stops) {
             val stopMarker = Marker(mapView).apply {
                 icon = context.getDrawable(R.drawable.ic_map_stop)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)

@@ -211,6 +211,7 @@ class TrainWifiService : Service() {
         var api: PortalApi? = null
         var reportedValid = false
         var dumped = false
+        var path = emptyList<LatLon>()
         var failures = 0
         var noPortalDelay = NO_PORTAL_RETRY_MIN_MS
         var noPortalSince = 0L
@@ -272,6 +273,8 @@ class TrainWifiService : Service() {
                 val gps = fetch("gps") { portal.gps() }
                 val trip = fetch("train details") { portal.trainDetails() }
                 val bar = fetch("bar attendance") { portal.barQueueEmpty() }
+                // Fixed for the whole trip, so only until it answers once.
+                if (path.isEmpty()) path = fetch("train graph") { portal.path() }.orEmpty()
 
                 publish(
                     TrainState(
@@ -282,6 +285,7 @@ class TrainWifiService : Service() {
                         statistics = statistics,
                         gps = gps,
                         trip = trip,
+                        path = path,
                         barQueueEmpty = bar,
                         updatedAtMillis = System.currentTimeMillis(),
                     ),

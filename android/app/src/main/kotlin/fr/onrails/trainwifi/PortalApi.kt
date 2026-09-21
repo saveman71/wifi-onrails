@@ -33,4 +33,7 @@ class PortalApi(private val client: PortalClient, val portal: Portal) {
 
     fun barQueueEmpty(): Boolean =
         Parsers.barQueueEmpty(client.getJson(portal.url("/router/api/bar/attendance")))
+
+    fun path(): List<LatLon> =
+        Parsers.path(client.getJson(portal.url("/router/api/train/graph")))
 }

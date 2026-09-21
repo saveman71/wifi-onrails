@@ -52,6 +52,15 @@ object Parsers {
 
     fun barQueueEmpty(json: JSONObject): Boolean = json.optBoolean("isBarQueueEmpty", false)
 
+    /** GeoJSON LineString, coordinates in [longitude, latitude] order as GeoJSON requires. */
+    fun path(json: JSONObject): List<LatLon> {
+        val array = json.optJSONArray("coordinates") ?: return emptyList()
+        return (0 until array.length()).mapNotNull { index ->
+            val pair = array.optJSONArray(index) ?: return@mapNotNull null
+            if (pair.length() < 2) null else LatLon(pair.optDouble(1), pair.optDouble(0))
+        }
+    }
+
     fun trip(json: JSONObject): Trip {
         val array: JSONArray = json.optJSONArray("stops") ?: JSONArray()
         val stops = (0 until array.length()).mapNotNull { array.optJSONObject(it) }.map(::stop)

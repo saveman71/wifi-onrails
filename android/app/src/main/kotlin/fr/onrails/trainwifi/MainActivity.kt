@@ -6,10 +6,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.pm.PackageManager
 import android.os.Build
+import android.graphics.Typeface
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -308,6 +311,17 @@ class MainActivity : Activity() {
         }
     }
 
+    /** "293 km/h" as the portal sets it: the figure large, "KM/H" small and upright beside it. */
+    private fun statValue(text: String?): CharSequence {
+        val (figure, unit) = Formatting.figureAndUnit(text)
+        if (unit.isEmpty()) return figure
+        val out = SpannableStringBuilder(figure).append(' ').append(unit.uppercase())
+        val from = figure.length + 1
+        out.setSpan(RelativeSizeSpan(0.42f), from, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        out.setSpan(StyleSpan(Typeface.NORMAL), from, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        return out
+    }
+
     private fun renderStats(state: TrainState) {
         val trip = state.trip
         if (trip == null) {
@@ -315,9 +329,9 @@ class MainActivity : Activity() {
             routeCard.visibility = View.GONE
             return
         }
-        statSpeed.text = Formatting.speed(state.gps) ?: "–"
-        statTraveled.text = trip.traveledMetres?.let { Formatting.km(it) } ?: "–"
-        statRemaining.text = trip.remainingMetres?.let { Formatting.km(it) } ?: "–"
+        statSpeed.text = statValue(Formatting.speed(state.gps))
+        statTraveled.text = statValue(trip.traveledMetres?.let { Formatting.km(it) })
+        statRemaining.text = statValue(trip.remainingMetres?.let { Formatting.km(it) })
         statsRow.visibility = View.VISIBLE
 
         timeline.setTrip(trip)

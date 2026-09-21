@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Palette inspired by the wifi.sncf portal: INOUI burgundy, navy labels, soft grey cards. -->
-    <color name="brand_red">#A0153E</color>
+    <!-- Read off the rendered wifi.sncf pages, not picked by eye. See portal-reference/README.md. -->
+    <color name="brand_red">#9C0C35</color>
     <color name="brand_red_soft">#E7B8C6</color>
-    <color name="brand_blue">#1F4B8E</color>
+    <color name="brand_blue">#1A3E70</color>
     <color name="brand_blue_soft">#DCE6F5</color>
     <color name="on_brand">#FFFFFF</color>
 
     <color name="bg">#FFFFFF</color>
-    <color name="surface">#F4F5F7</color>
-    <color name="tile">#FFFFFF</color>
+    <color name="surface">#F7F8F8</color>
+    <color name="tile">#F7F8F8</color>
     <color name="track">#E3E6EB</color>
     <color name="divider">#E3E6EB</color>
     <color name="text_primary">#15181F</color>

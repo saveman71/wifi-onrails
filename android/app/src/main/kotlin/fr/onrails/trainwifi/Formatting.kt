@@ -33,6 +33,16 @@ object Formatting {
     /** Metres in, "316 km" out. */
     fun km(metres: Double): String = "${(metres / 1000.0).roundToInt()} km"
 
+    /**
+     * Splits "293 km/h" into the figure and its unit. The portal sets the figure in Avenir Black
+     * and the unit small and upright beside it, both in the same burgundy.
+     */
+    fun figureAndUnit(text: String?): Pair<String, String> {
+        if (text == null) return "–" to ""
+        val space = text.indexOf(' ')
+        return if (space < 0) text to "" else text.take(space) to text.substring(space + 1)
+    }
+
     /** Whole minutes from now to [t], or null when unknown or already past. */
     fun minutesUntil(t: ZonedDateTime?): Long? {
         if (t == null) return null

@@ -14,6 +14,7 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.log.Logger
 import org.maplibre.android.maps.Style
 import org.maplibre.android.module.http.HttpRequestUtil
 import org.maplibre.android.style.layers.LineLayer
@@ -56,6 +57,8 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
 
         /** Must run before the first MapView is inflated. */
         fun configure(context: Context) {
+            // MapLibre logs one line per tile at INFO, which pushes everything else out of logcat.
+            Logger.setVerbosity(Logger.WARN)
             MapLibre.getInstance(context)
         }
 
@@ -76,6 +79,7 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
 
     init {
         mapView.onCreate(null)
+        mapView.addOnDidFailLoadingMapListener { reason -> AppState.log("Map failed to load: $reason") }
         mapView.getMapAsync { ready ->
             map = ready
             ready.uiSettings.isLogoEnabled = false
@@ -161,8 +165,10 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
             }
             main.post {
                 styleLoading = false
+                // getMapAsync may not have run yet. Leave styleKey empty so the next render tries again.
+                val target = map ?: return@post
                 styleKey = key
-                map?.setStyle(Style.Builder().fromJson(json)) { ready ->
+                target.setStyle(Style.Builder().fromJson(json)) { ready ->
                     style = ready
                     routeKey = null
                     addLayers(ready)

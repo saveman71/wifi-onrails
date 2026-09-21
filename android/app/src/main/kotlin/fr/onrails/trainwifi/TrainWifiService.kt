@@ -154,7 +154,10 @@ class TrainWifiService : Service() {
         val armed = settings.autoConnectEnabled()
         AppState.update { TrainState(phase = if (armed) Phase.STANDBY else Phase.STOPPED) }
         stopForeground(STOP_FOREGROUND_REMOVE)
-        if (armed) AutoConnect.arm(this) // wake us again on the next Wi-Fi network
+        if (armed) {
+            AutoConnect.arm(this) // wake us again on the next Wi-Fi network
+            AutoConnect.scheduleWifiJob(this)
+        }
         AppState.log(if (armed) "Service stopped, standby (watch armed)" else "Service stopped")
         super.onDestroy()
     }

@@ -35,11 +35,16 @@ object AutoConnect {
 
     private const val WATCH_REQUEST_CODE = 100
     private const val WATCH_JOB_ID = 1
+    private const val WIFI_JOB_ID = 2
+
+    /** How long after a Wi-Fi that is not a train before [WifiJobService] looks again. */
+    private val WIFI_JOB_RETRY_MS = TimeUnit.MINUTES.toMillis(5)
 
     fun enable(context: Context) {
         Settings(context).setAutoConnectEnabled(true)
         arm(context)
         scheduleWatchJob(context)
+        scheduleWifiJob(context)
         AppState.log("Auto-connect enabled: watching for Wi-Fi networks")
         AppState.update { if (it.phase == Phase.STOPPED) TrainState(phase = Phase.STANDBY) else it }
     }
@@ -48,6 +53,7 @@ object AutoConnect {
         Settings(context).setAutoConnectEnabled(false)
         disarm(context)
         cancelWatchJob(context)
+        cancelWifiJob(context)
         AppState.log("Auto-connect disabled")
     }
 
@@ -112,6 +118,30 @@ object AutoConnect {
 
     private fun cancelWatchJob(context: Context) {
         context.getSystemService(JobScheduler::class.java).cancel(WATCH_JOB_ID)
+    }
+
+    /**
+     * One run, waiting on a Wi-Fi network. `setRequiredNetworkType` cannot be used: JobInfo.Builder
+     * adds NET_CAPABILITY_VALIDATED to every type it knows, and a captive portal has none until the
+     * app has activated it. A NetworkRequest is stored as written.
+     */
+    fun scheduleWifiJob(context: Context) {
+        if (!Settings(context).autoConnectEnabled()) return
+        val request = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build()
+        val job = JobInfo.Builder(WIFI_JOB_ID, ComponentName(context, WifiJobService::class.java))
+            .setRequiredNetwork(request)
+            .setMinimumLatency(WIFI_JOB_RETRY_MS)
+            .setPersisted(true)
+            .build()
+        val result = context.getSystemService(JobScheduler::class.java).schedule(job)
+        AppState.log(
+            if (result == JobScheduler.RESULT_SUCCESS) "Wi-Fi job scheduled, next look in ${WIFI_JOB_RETRY_MS / 60_000} min"
+            else "Wi-Fi job refused by the scheduler (result $result)",
+        )
+    }
+
+    private fun cancelWifiJob(context: Context) {
+        context.getSystemService(JobScheduler::class.java).cancel(WIFI_JOB_ID)
     }
 
     /**

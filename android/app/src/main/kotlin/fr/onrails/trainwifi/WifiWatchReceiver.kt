@@ -16,6 +16,7 @@ class WifiWatchReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        AppState.log("Wi-Fi watch receiver fired: ${intent.action}")
         if (intent.action != ACTION_WIFI_AVAILABLE) return
         val network: Network? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK, Network::class.java)

@@ -54,15 +54,22 @@ object AutoConnect {
     fun arm(context: Context) {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val request = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build()
-        connectivity.registerNetworkCallback(request, watchIntent(context))
+        val intent = watchIntent(context)
+        try {
+            connectivity.registerNetworkCallback(request, intent)
+            AppState.log("Wi-Fi watch armed on $intent")
+        } catch (e: Exception) {
+            AppState.log("Wi-Fi watch NOT armed (${e.javaClass.simpleName}): ${e.message}")
+        }
     }
 
     fun disarm(context: Context) {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         try {
             connectivity.unregisterNetworkCallback(watchIntent(context))
+            AppState.log("Wi-Fi watch disarmed")
         } catch (e: IllegalArgumentException) {
-            // Not registered (e.g. after a reboot): nothing to do.
+            AppState.log("Wi-Fi watch was not armed, nothing to disarm")
         }
     }
 
@@ -90,8 +97,15 @@ object AutoConnect {
      * train. Runs on a worker thread. Returns true when the service was started.
      */
     fun onWifiAvailable(context: Context, hint: Network?, source: String): Boolean {
-        if (!Settings(context).autoConnectEnabled()) return false
-        if (AppState.state.value.phase.isRunning()) return false
+        if (!Settings(context).autoConnectEnabled()) {
+            AppState.log("$source: auto-connect is off, ignoring")
+            return false
+        }
+        val phase = AppState.state.value.phase
+        if (phase.isRunning()) {
+            AppState.log("$source: already $phase, nothing to do")
+            return false
+        }
 
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val network = hint ?: PortalDetector.findWifiNetwork(connectivity)

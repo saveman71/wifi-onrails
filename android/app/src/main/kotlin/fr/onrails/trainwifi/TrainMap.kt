@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.log.Logger
@@ -45,9 +46,14 @@ import kotlin.concurrent.thread
 class TrainMap(private val context: Context, private val mapView: MapView, private val recenterButton: View) {
 
     companion object {
-        const val DEFAULT_ZOOM = 8.0
         const val MIN_ZOOM = 4.0
         const val MAX_ZOOM = 14.0
+
+        /** Room for the train and station markers when the camera is set to the whole trip. */
+        private const val ROUTE_PADDING_PX = 48
+
+        /** Zoom the Recenter chip goes to, close enough to read the line the train is on. */
+        private const val FOLLOW_ZOOM = 11.0
         private const val STYLE_HOST = "http://localhost:8000"
         private const val ROUTE_SOURCE = "trainwifi-route"
         private const val STOPS_SOURCE = "trainwifi-stops"
@@ -67,7 +73,9 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
     }
 
     private val main = Handler(Looper.getMainLooper())
-    private var follow = true
+    // The first view is the whole trip, so nothing follows the train until Recenter is pressed.
+    private var follow = false
+    private var fittedRoute = false
     private var centeredOnce = false
     private var map: MapLibreMap? = null
     private var style: Style? = null
@@ -222,15 +230,25 @@ class TrainMap(private val context: Context, private val mapView: MapView, priva
                 stops.map { Feature.fromGeometry(Point.fromLngLat(it.longitude!!, it.latitude!!)) },
             ),
         )
+        if (!fittedRoute && line.size >= 2) fitWholeTrip(line)
+    }
+
+    private fun fitWholeTrip(line: List<LatLon>) {
+        val target = map ?: return
+        val bounds = LatLngBounds.Builder()
+            .includes(line.map { LatLng(it.latitude, it.longitude) })
+            .build()
+        target.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, ROUTE_PADDING_PX))
+        fittedRoute = true
+        recenterButton.visibility = View.VISIBLE
     }
 
     private fun centerOn(position: LatLng) {
-        val camera = if (centeredOnce) {
-            CameraUpdateFactory.newLatLng(position)
+        if (centeredOnce) {
+            map?.easeCamera(CameraUpdateFactory.newLatLng(position), 800)
         } else {
-            CameraUpdateFactory.newLatLngZoom(position, DEFAULT_ZOOM)
+            map?.easeCamera(CameraUpdateFactory.newLatLngZoom(position, FOLLOW_ZOOM), 800)
         }
-        if (centeredOnce) map?.easeCamera(camera, 800) else map?.moveCamera(camera)
         centeredOnce = true
     }
 

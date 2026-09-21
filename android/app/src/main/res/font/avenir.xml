@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The two faces the portal loads: Avenir Medium for text, Avenir LT W02 95 Black for figures
+     and headings. Converted from the WOFF files wifi.sncf serves. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/avenir_medium"
+        android:fontStyle="normal"
+        android:fontWeight="500" />
+    <font
+        android:font="@font/avenir_black"
+        android:fontStyle="normal"
+        android:fontWeight="900" />
+</font-family>

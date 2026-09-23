@@ -81,7 +81,15 @@ the code:
    adds `NET_CAPABILITY_VALIDATED` to every type it knows, and a captive portal has none until the
    app has activated it. `dumpsys jobscheduler` shows the stored request asking only for
    `TRANSPORT_WIFI`. Off Wi-Fi this waits for free; on a Wi-Fi that is not a train it re-schedules
-   itself 5 min out.
+   itself 5 min out. That 5 min is a floor, not a promise: on 2026-09-23 JobScheduler ran it 6 to
+   29 min after scheduling, with the constraint met the whole time.
+
+A probe that gets no answer is not "not a train" when the portal name resolved. `wifi.sncf` and
+`wifi.normandie.fr` only resolve through a train's DNS (elsewhere the lookup fails with
+`UnknownHostException`), so `PortalDetector.Detection.hostResolved` makes `AutoConnect` start the
+service anyway. On a TGV in multiple unit each unit has its own Wi-Fi: the phone joined one whose
+portal (`10.4.0.2`) timed out on 443, moved a minute later to the other (`10.101.x`), and only the
+running service follows it there. Before that fix the app sat idle for 9 min on a working portal.
 6. `BootReceiver` re-arms after a reboot or an app update.
 
 `AutoConnect.onWifiAvailable` returns early and **silently** when auto-connect is off or when

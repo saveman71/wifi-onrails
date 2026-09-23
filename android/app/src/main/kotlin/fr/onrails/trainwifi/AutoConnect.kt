@@ -167,20 +167,24 @@ object AutoConnect {
         }
         AppState.log("$source: Wi-Fi $network available, probing for a train portal")
         val detection = PortalDetector.quickDetect(network)
-        if (detection.api == null) {
-            AppState.log(
-                if (detection.bindingRefused) "$source: socket binding refused (VPN active?), staying in standby"
-                else "$source: not a train, staying in standby",
-            )
-            return false
+        if (detection.api != null) return startServiceOrNotify(context, detection.api.portal)
+        if (detection.hostResolved) {
+            // The service retries with backoff and follows the phone onto the next Wi-Fi.
+            // Giving up here leaves nothing to look at this network again.
+            AppState.log("$source: portal name resolves here but the portal did not answer, starting the service anyway")
+            return startServiceOrNotify(context, Portal.SNCF)
         }
-        return startServiceOrNotify(context, detection.api.portal)
+        AppState.log(
+            if (detection.bindingRefused) "$source: socket binding refused (VPN active?), staying in standby"
+            else "$source: not a train, staying in standby",
+        )
+        return false
     }
 
     private fun startServiceOrNotify(context: Context, portal: Portal): Boolean {
         try {
             TrainWifiService.start(context)
-            AppState.log("Train portal ${portal.host} found, service started")
+            AppState.log("Service started for ${portal.host}")
             return true
         } catch (e: Exception) {
             // Android 12+: ForegroundServiceStartNotAllowedException unless exempt from battery optimisations.

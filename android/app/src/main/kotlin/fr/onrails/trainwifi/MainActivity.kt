@@ -37,6 +37,8 @@ class MainActivity : Activity() {
     private lateinit var settings: Settings
 
     private lateinit var appTitle: TextView
+    private lateinit var btnEnable: Button
+    private lateinit var btnStop: Button
     private lateinit var phaseChip: TextView
     private lateinit var heroKicker: TextView
     private lateinit var heroTitle: TextView
@@ -80,10 +82,11 @@ class MainActivity : Activity() {
         ssidEdit.setText(settings.ssids().joinToString("\n"))
         setAdvancedVisible(settings.advancedExpanded())
 
-        findViewById<Button>(R.id.btn_enable).setOnClickListener {
+        btnEnable.setOnClickListener {
             withNotificationPermission {
                 registerSuggestions(settings.ssids())
                 AutoConnect.enable(this)
+                renderActions()
                 // Already on a Wi-Fi? Probe it right away instead of waiting for the next network event.
                 Thread { AutoConnect.onWifiAvailable(applicationContext, null, "Enable") }.start()
                 if (!AutoConnect.isExemptFromBatteryOptimizations(this)) {
@@ -91,9 +94,10 @@ class MainActivity : Activity() {
                 }
             }
         }
-        findViewById<Button>(R.id.btn_stop).setOnClickListener {
+        btnStop.setOnClickListener {
             AutoConnect.disable(this)
             TrainWifiService.stop(this)
+            renderActions()
         }
         findViewById<Button>(R.id.btn_battery).setOnClickListener {
             startActivity(AutoConnect.requestBatteryExemptionIntent(this))
@@ -134,6 +138,8 @@ class MainActivity : Activity() {
 
     private fun bindViews() {
         appTitle = findViewById(R.id.app_title)
+        btnEnable = findViewById(R.id.btn_enable)
+        btnStop = findViewById(R.id.btn_stop)
         phaseChip = findViewById(R.id.phase_chip)
         heroKicker = findViewById(R.id.hero_kicker)
         heroTitle = findViewById(R.id.hero_title)
@@ -244,7 +250,15 @@ class MainActivity : Activity() {
 
     // ---- Rendering -------------------------------------------------------------------------
 
+    /** Enable only while auto-connect is off, Disable only while it is on. */
+    private fun renderActions() {
+        val enabled = settings.autoConnectEnabled()
+        btnEnable.visibility = if (enabled) View.GONE else View.VISIBLE
+        btnStop.visibility = if (enabled) View.VISIBLE else View.GONE
+    }
+
     private fun render(state: TrainState) {
+        renderActions()
         appTitle.text = titleWithTrainNumber(state.trip?.number)
         phaseChip.text = chipLabel(state.phase)
         renderHero(state)
